@@ -8,6 +8,7 @@ import {
   normalizeWord,
   positionForCursor,
   similar,
+  trackSpoken,
 } from "./voice";
 
 const SCRIPT =
@@ -95,5 +96,48 @@ describe("cursor ↔ posição", () => {
     const cursor = cursorForPosition(words, 2);
     expect(words[cursor].line).toBe(2);
     expect(words[cursor].indexInLine).toBe(0);
+  });
+});
+
+describe("trackSpoken — proteção contra vai e volta", () => {
+  const at = (cursor: number) => ({ cursor, pending: null });
+  const interim = (text: string) => ({ text, final: false });
+  const final = (text: string) => ({ text, final: true });
+
+  it("avança na hora em passos pequenos", () => {
+    expect(trackSpoken(words, at(0), interim("olá pessoal"))).toEqual(
+      at(indexOf("pessoal") + 1),
+    );
+  });
+
+  it("revisão de hipótese provisória não faz o texto voltar", () => {
+    // O reconhecedor ouviu "…hoje vamos" e depois corrigiu para "…hoje".
+    const afterVamos = at(indexOf("vamos") + 1);
+    expect(trackSpoken(words, afterVamos, interim("olá pessoal hoje"))).toBe(afterVamos);
+    expect(trackSpoken(words, afterVamos, final("olá pessoal hoje"))).toBe(afterVamos);
+  });
+
+  it("volta apenas quando a pessoa repete um trecho, com frase finalizada", () => {
+    const afterRoteiro = at(indexOf("roteiro") + 1);
+    const repeated = "ajuste a câmera na altura dos olhos";
+    expect(trackSpoken(words, afterRoteiro, interim(repeated))).toBe(afterRoteiro);
+    expect(trackSpoken(words, afterRoteiro, final(repeated))).toEqual(
+      at(indexOf("olhos") + 1),
+    );
+  });
+
+  it("salto grande para frente precisa de confirmação na transcrição seguinte", () => {
+    const first = trackSpoken(words, at(0), interim("ajuste a câmera na altura"));
+    expect(first).toEqual({ cursor: 0, pending: indexOf("altura") + 1 });
+
+    const second = trackSpoken(words, first, interim("ajuste a câmera na altura dos"));
+    expect(second).toEqual(at(indexOf("dos") + 1));
+  });
+
+  it("um salto isolado (erro do reconhecedor) é descartado quando a leitura segue normal", () => {
+    const glitch = trackSpoken(words, at(0), interim("ajuste a câmera na altura"));
+    expect(trackSpoken(words, glitch, interim("olá pessoal"))).toEqual(
+      at(indexOf("pessoal") + 1),
+    );
   });
 });

@@ -8,6 +8,13 @@ function currentLine() {
   return document.querySelector('[aria-current="true"]')?.textContent;
 }
 
+/** Quanto o texto já subiu (em em), lido do transform aplicado pela sessão. */
+function trackOffset() {
+  const track = document.querySelector('[aria-current="true"]')?.parentElement;
+  const match = /translate3d\(0(?:px)?, (-?[\d.]+)em/.exec(track?.style.transform ?? "");
+  return match ? -Number(match[1]) : 0;
+}
+
 /** Avança o relógio em passos, para os efeitos reagendarem temporizadores entre eles. */
 function advance(ms: number, step = 100) {
   for (let elapsed = 0; elapsed < ms; elapsed += step)
@@ -230,6 +237,8 @@ describe("<Teleprompter /> — seguir a voz", () => {
     advance(2000);
     expect(currentLine()).toBe("Primeira linha do roteiro.");
 
+    // O reconhecedor entrega a frase aos poucos, como o Chrome faz.
+    act(() => FakeRecognition.instance?.say("primeira linha"));
     act(() => FakeRecognition.instance?.say("primeira linha do roteiro"));
     advance(1000);
     expect(currentLine()).toBe("Segundo parágrafo aqui.");
@@ -237,6 +246,24 @@ describe("<Teleprompter /> — seguir a voz", () => {
     act(() => FakeRecognition.instance?.say("segundo parágrafo aqui"));
     advance(1500);
     expect(screen.getByText("Fim")).toBeInTheDocument();
+  });
+
+  it("correção de hipótese provisória não faz o texto voltar", async () => {
+    useFakeClock();
+    renderWith(SCRIPT);
+    fireEvent.click(screen.getByRole("button", { name: "Iniciar" }));
+    await act(async () => {});
+
+    act(() => FakeRecognition.instance?.say("primeira linha"));
+    act(() => FakeRecognition.instance?.say("primeira linha do roteiro segundo"));
+    advance(1500);
+    const before = trackOffset();
+    expect(before).toBeGreaterThan(0);
+
+    // O reconhecedor revisa e "desdiz" a última palavra.
+    act(() => FakeRecognition.instance?.say("primeira linha do roteiro"));
+    advance(1500);
+    expect(trackOffset()).toBeGreaterThanOrEqual(before);
   });
 
   it("microfone bloqueado oferece trocar para velocidade", async () => {

@@ -69,6 +69,7 @@ Regras de inserção:
 4. **Contexto:** as linhas já lidas continuam visíveis acima da guia (esmaecidas, desaparecendo aos poucos no topo); as próximas, inclusive de outros parágrafos, ficam legíveis abaixo.
 5. **Rolagem contínua e suave**, sem saltos.
    - **Modo voz:** o microfone ouve a leitura; as palavras reconhecidas são alinhadas ao roteiro (tolerando acentos, erros do reconhecedor e palavras puladas) e o texto desliza até a palavra dita. Pausas na fala param o texto; repetir um trecho anterior faz o texto voltar.
+   - **Proteção contra vai e volta:** o texto só volta com frase **finalizada** pelo reconhecedor, recuo de ≥ 4 palavras e ≥ 3 palavras significativas casadas — correções de hipóteses provisórias nunca fazem o texto voltar. Saltos para frente de mais de 3 palavras precisam se repetir na transcrição seguinte. Remedir o texto (fonte, redimensionar) não altera o ponto da voz.
    - **Modo velocidade:** cada linha leva `palavras ÷ ppm` para passar pela guia (+ pausas, se "Seguram o texto").
 6. **Reposicionar a qualquer momento** com `↑`/`↓` (uma linha), roda do mouse/trackpad (fino) ou passador de slides. No modo voz, a escuta recomeça a partir do novo ponto, descartando o que já foi ouvido.
 7. Indicador do microfone (ligando, ouvindo, bloqueado, falha). Microfone bloqueado ou falha mostram um aviso com **Usar velocidade**.
@@ -103,6 +104,7 @@ Regras de inserção:
 - [x] Contagem regressiva antes do início; Espaço pula a contagem.
 - [x] Rolagem contínua (sem saltos), com linhas já lidas visíveis acima da guia e próximas abaixo.
 - [x] Modo voz: o texto avança conforme as palavras ditas, tolera erros e palavras puladas, ignora fala fora do roteiro e volta quando um trecho é repetido.
+- [x] Modo voz: correções provisórias do reconhecedor e saltos isolados não fazem o texto ir e voltar.
 - [x] Modo voz: microfone bloqueado mostra aviso e permite trocar para velocidade.
 - [x] Pausar e continuar de onde parou; reposicionar por setas, roda do mouse e passador.
 - [x] Reiniciar, sair, alternar voz/velocidade e ajustar velocidade por botão e teclado.

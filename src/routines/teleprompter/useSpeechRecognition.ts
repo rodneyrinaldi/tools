@@ -40,7 +40,7 @@ export function isSpeechRecognitionSupported() {
 
 /**
  * Escuta o microfone enquanto `active` e entrega as palavras mais recentes ouvidas
- * (finais + provisórias). Reinicia sozinho quando o navegador encerra a sessão.
+ * (finais + provisórias), indicando se a frase já foi finalizada. Reinicia sozinho quando o navegador encerra a sessão.
  * `forgetHeard()` descarta o que já foi ouvido (ex.: após reposicionar o texto manualmente).
  */
 export function useSpeechRecognition({
@@ -50,7 +50,8 @@ export function useSpeechRecognition({
 }: {
   active: boolean;
   lang?: string;
-  onTranscript: (recentText: string) => void;
+  /** `final`: o reconhecedor fechou a frase (sem hipótese provisória pendente). */
+  onTranscript: (heard: { text: string; final: boolean }) => void;
 }) {
   const [status, setStatus] = useState<SpeechStatus>("idle");
   const onTranscriptRef = useRef(onTranscript);
@@ -106,7 +107,10 @@ export function useSpeechRecognition({
       }
       const last = event.results[event.results.length - 1];
       seen = { count: event.results.length, lastTranscript: last?.[0].transcript ?? "" };
-      onTranscriptRef.current(`${finalWords.join(" ")} ${interim}`.trim());
+      onTranscriptRef.current({
+        text: `${finalWords.join(" ")} ${interim}`.trim(),
+        final: interim.trim() === "",
+      });
     };
     recognition.onerror = (event) => {
       if (event.error === "not-allowed" || event.error === "service-not-allowed") {

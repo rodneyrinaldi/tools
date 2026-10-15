@@ -22,8 +22,8 @@ import {
 import {
   buildWordIndex,
   cursorForPosition,
-  matchSpoken,
   positionForCursor,
+  trackSpoken,
 } from "./voice";
 
 const MIN_WPM = 60;
@@ -79,7 +79,14 @@ export function Session({
   const lineIndex = Math.min(lineIndexAt(lines, lineToken), lines.length - 1);
 
   // Estado do laço de animação: muda a cada quadro, por isso fica em refs.
-  const engine = useRef({ position: 0, target: 0, cursor: 0, token: 0 });
+  // cursor/pending: acompanhamento da voz (ver trackSpoken).
+  const engine = useRef({
+    position: 0,
+    target: 0,
+    token: 0,
+    cursor: 0,
+    pending: null as number | null,
+  });
   const trackRef = useRef<HTMLDivElement | null>(null);
   const latest = useRef({ lines, durations, words });
   useEffect(() => {
@@ -112,12 +119,13 @@ export function Session({
     [paint],
   );
 
-  // Texto re-quebrado (redimensionou / trocou de visualização): mantém o ponto de leitura.
+  // Texto re-quebrado (medição inicial da fonte, redimensionar, trocar de visualização):
+  // mantém o ponto de leitura. O cursor da voz é um índice de palavra — não muda com a
+  // quebra — então só o alvo é recalculado, e nunca para trás da posição atual.
   useEffect(() => {
     const e = engine.current;
     e.position = tokenToPosition(lines, e.token);
-    e.target = e.position;
-    e.cursor = cursorForPosition(words, e.position);
+    e.target = Math.max(e.position, positionForCursor(words, e.cursor, lines.length));
     paint();
   }, [lines, words, paint]);
 
@@ -174,10 +182,11 @@ export function Session({
     onTranscript: (heard) => {
       const { lines, words } = latest.current;
       const e = engine.current;
-      const cursor = matchSpoken(words, e.cursor, heard);
-      if (cursor === null || cursor === e.cursor) return;
-      e.cursor = cursor;
-      e.target = positionForCursor(words, cursor, lines.length);
+      const next = trackSpoken(words, { cursor: e.cursor, pending: e.pending }, heard);
+      e.pending = next.pending;
+      if (next.cursor === e.cursor) return;
+      e.cursor = next.cursor;
+      e.target = positionForCursor(words, next.cursor, lines.length);
     },
   });
   const forgetHeard = voiceStatus.forgetHeard;
@@ -195,6 +204,7 @@ export function Session({
       const position = clamp(base + deltaLines, 0, Math.max(0, lines.length - 0.001));
       e.target = position;
       e.cursor = cursorForPosition(words, position);
+      e.pending = null;
       commit(position);
       forgetHeard();
       dispatch({ type: "moved" });
@@ -205,6 +215,7 @@ export function Session({
   const restart = useCallback(() => {
     engine.current.target = 0;
     engine.current.cursor = 0;
+    engine.current.pending = null;
     commit(0);
     forgetHeard();
     dispatch({ type: "restart", countdown });
@@ -219,6 +230,7 @@ export function Session({
     const e = engine.current;
     e.target = e.position;
     e.cursor = cursorForPosition(latest.current.words, e.position);
+    e.pending = null;
     forgetHeard();
     setDrive((current) =>
       current === "voice" || !isSpeechRecognitionSupported() ? "speed" : "voice",

@@ -19,6 +19,12 @@ export const RECENT_WORDS = 6;
 /** Janela de busca em torno do cursor (em palavras). */
 export const LOOK_BEHIND = 12;
 export const LOOK_AHEAD = 30;
+/** Avanços de até tantas palavras são aplicados na hora; maiores precisam de confirmação. */
+export const SMALL_STEP_WORDS = 3;
+/** Voltar exige pelo menos este peso de palavras casadas (≈ 3 palavras significativas)… */
+export const BACKWARD_MIN_SCORE = 3;
+/** …e um recuo de pelo menos tantas palavras (recuos menores são ruído do reconhecedor). */
+export const BACKWARD_MIN_WORDS = 4;
 
 export function normalizeWord(word: string): string {
   return word
@@ -100,7 +106,8 @@ export function matchSpoken(
     }
 
     const distance = j - cursor;
-    const required = distance < 0 ? 2.4 : distance > 3 ? 1.8 : 1;
+    const required =
+      distance < 0 ? BACKWARD_MIN_SCORE : distance > SMALL_STEP_WORDS ? 1.8 : 1;
     if (score < required) continue;
 
     const adjusted = score - Math.abs(distance) * 0.05 - (distance < 0 ? 0.5 : 0);
@@ -108,6 +115,48 @@ export function matchSpoken(
   }
 
   return best ? best.index + 1 : null;
+}
+
+/**
+ * Estado do acompanhamento da voz. `pending` guarda um salto grande para frente
+ * ainda não confirmado.
+ */
+export type VoiceTracker = { cursor: number; pending: number | null };
+
+export type Heard = { text: string; final: boolean };
+
+/**
+ * Decide se o cursor muda, com proteções contra o "vai e volta":
+ * - o reconhecedor revisa as hipóteses provisórias (ex.: "…hoje vamos" → "…hoje"); essas
+ *   revisões nunca fazem o texto voltar;
+ * - voltar só com fala finalizada, bem atrás (≥ BACKWARD_MIN_WORDS) e com contexto forte —
+ *   ou seja, quando a pessoa realmente repete um trecho;
+ * - saltos grandes para frente precisam aparecer em duas transcrições seguidas.
+ */
+export function trackSpoken(
+  words: ScriptWord[],
+  state: VoiceTracker,
+  heard: Heard,
+): VoiceTracker {
+  const candidate = matchSpoken(words, state.cursor, heard.text);
+  if (candidate === null) return state;
+  const distance = candidate - state.cursor;
+
+  if (distance === 0) return state.pending === null ? state : { ...state, pending: null };
+
+  if (distance < 0) {
+    return heard.final && distance <= -BACKWARD_MIN_WORDS
+      ? { cursor: candidate, pending: null }
+      : state;
+  }
+
+  if (distance <= SMALL_STEP_WORDS) return { cursor: candidate, pending: null };
+
+  const confirmed =
+    state.pending !== null && Math.abs(candidate - state.pending) <= SMALL_STEP_WORDS;
+  return confirmed
+    ? { cursor: candidate, pending: null }
+    : { ...state, pending: candidate };
 }
 
 /** Posição de rolagem (em linhas) correspondente ao cursor. */

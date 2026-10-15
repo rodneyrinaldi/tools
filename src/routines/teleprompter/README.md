@@ -24,6 +24,7 @@ O navegador transforma sua fala em texto e a rotina procura essas palavras no ro
 
 - falou mais rápido, o texto acompanha; parou, respirou ou improvisou, o texto espera;
 - pulou um trecho, o texto avança até onde você está; repetiu uma frase, o texto volta;
+- o texto **não vai e volta** com as correções que o reconhecedor faz enquanto você fala: ele só volta quando você claramente repete um trecho, e saltos grandes para frente precisam se confirmar;
 - erros do reconhecimento (acentos, plurais, palavras cortadas) são tolerados.
 
 **Requisitos e privacidade:** funciona no **Chrome** e no **Edge**, com internet. No Chrome, o áudio é processado pelos servidores do Google. Se o microfone estiver bloqueado ou o reconhecimento falhar, um aviso oferece **Usar velocidade**, e `V` alterna entre os modos a qualquer momento.
