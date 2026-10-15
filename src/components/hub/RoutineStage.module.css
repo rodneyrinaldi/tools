@@ -1,0 +1,25 @@
+.stage {
+  display: grid;
+  gap: var(--ds-space-5);
+}
+
+.header {
+  display: grid;
+  justify-items: start;
+  gap: var(--ds-space-2);
+}
+
+.title {
+  margin-top: var(--ds-space-2);
+  font-size: var(--ds-text-xl);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.description {
+  color: var(--ds-color-text-muted);
+}
+
+.loading {
+  color: var(--ds-color-text-subtle);
+}

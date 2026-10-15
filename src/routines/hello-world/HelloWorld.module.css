@@ -1,0 +1,41 @@
+.root {
+  display: grid;
+  gap: var(--ds-space-5);
+}
+
+.greetingCard {
+  display: grid;
+  place-items: center;
+  min-height: 180px;
+}
+
+.greeting {
+  font-size: var(--ds-text-2xl);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  text-align: center;
+  background: linear-gradient(
+    120deg,
+    var(--ds-color-text) 20%,
+    var(--ds-color-accent-strong) 60%,
+    var(--ds-color-accent-2)
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  overflow-wrap: anywhere;
+}
+
+.form {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--ds-space-3);
+}
+
+.form > :first-child {
+  flex: 1;
+}
+
+.form > button {
+  margin-top: 28px;
+}

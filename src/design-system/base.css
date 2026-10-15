@@ -1,0 +1,71 @@
+/* Reset mínimo + fundo ambiente do design system. */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+html,
+body {
+  min-height: 100%;
+}
+
+body {
+  background-color: var(--ds-color-bg);
+  color: var(--ds-color-text);
+  font-family: var(--ds-font-sans);
+  font-size: var(--ds-text-md);
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Brilhos ambientes que dão profundidade ao vidro. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(40rem 30rem at 12% -5%, rgb(139 124 255 / 0.22), transparent 70%),
+    radial-gradient(36rem 28rem at 95% 10%, rgb(58 214 197 / 0.14), transparent 70%),
+    radial-gradient(50rem 40rem at 50% 120%, rgb(139 124 255 / 0.12), transparent 70%);
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+  color: inherit;
+}
+
+code,
+kbd,
+pre {
+  font-family: var(--ds-font-mono);
+}
+
+:focus-visible {
+  outline: none;
+  box-shadow: var(--ds-focus-ring);
+}
+
+::selection {
+  background: var(--ds-color-accent-soft);
+}

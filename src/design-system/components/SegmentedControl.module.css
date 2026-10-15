@@ -1,0 +1,63 @@
+.fieldset {
+  border: 0;
+  min-width: 0;
+}
+
+.legend {
+  margin-bottom: var(--ds-space-2);
+  font-size: var(--ds-text-sm);
+  color: var(--ds-color-text-muted);
+}
+
+.track {
+  display: inline-flex;
+  gap: var(--ds-space-1);
+  padding: var(--ds-space-1);
+  background: rgb(0 0 0 / 0.25);
+  border: 1px solid var(--ds-glass-border);
+  border-radius: var(--ds-radius-full);
+}
+
+.option {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  height: 34px;
+  padding: 0 var(--ds-space-4);
+  border-radius: var(--ds-radius-full);
+  font-size: var(--ds-text-sm);
+  color: var(--ds-color-text-muted);
+  cursor: pointer;
+  transition:
+    background var(--ds-duration-fast) var(--ds-ease),
+    color var(--ds-duration-fast) var(--ds-ease);
+}
+
+.option:hover {
+  color: var(--ds-color-text);
+}
+
+.selected {
+  background: var(--ds-glass-bg-strong);
+  color: var(--ds-color-text);
+  box-shadow: inset 0 0 0 1px var(--ds-glass-border-strong);
+}
+
+.disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.disabled:hover {
+  color: var(--ds-color-text-muted);
+}
+
+.input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.option:has(.input:focus-visible) {
+  box-shadow: var(--ds-focus-ring);
+}

@@ -1,0 +1,90 @@
+/*
+ * Design tokens — fonte única de verdade visual do projeto.
+ * Tema escuro elegante com superfícies translúcidas ("glass").
+ * Nunca use valores literais de cor/espaço/raio nos componentes: use estes tokens.
+ */
+:root {
+  color-scheme: dark;
+
+  /* Cores base */
+  --ds-color-bg: #07080d;
+  --ds-color-bg-elevated: #0d0f17;
+  --ds-color-text: #ecedf3;
+  --ds-color-text-muted: rgb(236 237 243 / 0.62);
+  --ds-color-text-subtle: rgb(236 237 243 / 0.4);
+
+  /* Acentos */
+  --ds-color-accent: #8b7cff;
+  --ds-color-accent-strong: #a597ff;
+  --ds-color-accent-soft: rgb(139 124 255 / 0.16);
+  --ds-color-accent-2: #3ad6c5;
+  /* Rosa: reservado a anotações/indicações que não fazem parte do conteúdo. */
+  --ds-color-accent-3: #f472b6;
+  --ds-color-success: #4ade80;
+  --ds-color-warning: #fbbf24;
+  --ds-color-danger: #f87171;
+
+  /* Glass */
+  --ds-glass-bg: rgb(255 255 255 / 0.045);
+  --ds-glass-bg-hover: rgb(255 255 255 / 0.075);
+  --ds-glass-bg-strong: rgb(255 255 255 / 0.09);
+  --ds-glass-border: rgb(255 255 255 / 0.09);
+  --ds-glass-border-strong: rgb(255 255 255 / 0.18);
+  --ds-glass-highlight: linear-gradient(
+    135deg,
+    rgb(255 255 255 / 0.1),
+    rgb(255 255 255 / 0) 45%
+  );
+  --ds-glass-blur: 18px;
+
+  /* Tipografia */
+  --ds-font-sans:
+    var(--font-geist-sans), system-ui, -apple-system, "Segoe UI", sans-serif;
+  --ds-font-mono: var(--font-geist-mono), ui-monospace, "Cascadia Code", monospace;
+  --ds-text-xs: 0.75rem;
+  --ds-text-sm: 0.875rem;
+  --ds-text-md: 1rem;
+  --ds-text-lg: 1.25rem;
+  --ds-text-xl: 1.75rem;
+  --ds-text-2xl: clamp(2rem, 4vw + 1rem, 3.25rem);
+
+  /* Espaçamento (escala de 4px) */
+  --ds-space-1: 0.25rem;
+  --ds-space-2: 0.5rem;
+  --ds-space-3: 0.75rem;
+  --ds-space-4: 1rem;
+  --ds-space-5: 1.5rem;
+  --ds-space-6: 2rem;
+  --ds-space-7: 3rem;
+  --ds-space-8: 4rem;
+
+  /* Raios */
+  --ds-radius-sm: 8px;
+  --ds-radius-md: 14px;
+  --ds-radius-lg: 22px;
+  --ds-radius-full: 999px;
+
+  /* Sombras */
+  --ds-shadow-sm: 0 1px 2px rgb(0 0 0 / 0.4);
+  --ds-shadow-md: 0 10px 30px -12px rgb(0 0 0 / 0.6);
+  --ds-shadow-glow:
+    0 0 0 1px var(--ds-color-accent-soft), 0 12px 40px -12px rgb(139 124 255 / 0.45);
+
+  /* Foco */
+  --ds-focus-ring: 0 0 0 2px var(--ds-color-bg), 0 0 0 4px var(--ds-color-accent);
+
+  /* Movimento */
+  --ds-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ds-duration-fast: 120ms;
+  --ds-duration: 220ms;
+
+  /* Layout */
+  --ds-content-width: 1120px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --ds-duration-fast: 0ms;
+    --ds-duration: 0ms;
+  }
+}

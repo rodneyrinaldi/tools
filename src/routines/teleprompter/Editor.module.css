@@ -1,0 +1,63 @@
+.root {
+  display: grid;
+  gap: var(--ds-space-5);
+}
+
+.markers {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--ds-space-2);
+  margin-top: calc(-1 * var(--ds-space-3));
+}
+
+.markersLabel {
+  font-size: var(--ds-text-sm);
+  color: var(--ds-color-text-subtle);
+}
+
+.autoStatus {
+  font-size: var(--ds-text-xs);
+  color: var(--ds-color-accent-strong);
+}
+
+.settings {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--ds-space-5);
+}
+
+.countdown {
+  width: 190px;
+}
+
+.estimate {
+  display: grid;
+  gap: var(--ds-space-2);
+  padding-bottom: var(--ds-space-3);
+}
+
+.estimateLabel {
+  font-size: var(--ds-text-sm);
+  color: var(--ds-color-text-muted);
+}
+
+.driveHint {
+  margin-top: calc(-1 * var(--ds-space-3));
+  max-width: 70ch;
+  font-size: var(--ds-text-sm);
+  color: var(--ds-color-text-subtle);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ds-space-3);
+  padding-top: var(--ds-space-4);
+  border-top: 1px solid var(--ds-glass-border);
+}
+
+.spacer {
+  flex: 1;
+}

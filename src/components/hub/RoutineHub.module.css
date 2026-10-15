@@ -1,0 +1,56 @@
+.shell {
+  width: min(100% - 2 * var(--ds-space-4), var(--ds-content-width));
+  margin-inline: auto;
+  padding-block: var(--ds-space-5) var(--ds-space-8);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--ds-space-7);
+}
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ds-space-2);
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.brandMark {
+  width: 18px;
+  height: 18px;
+  border-radius: 6px;
+  background: linear-gradient(135deg, var(--ds-color-accent), var(--ds-color-accent-2));
+  box-shadow: 0 0 20px rgb(139 124 255 / 0.6);
+}
+
+.counter {
+  font-size: var(--ds-text-sm);
+  color: var(--ds-color-text-subtle);
+}
+
+.intro {
+  margin-bottom: var(--ds-space-6);
+}
+
+.title {
+  font-size: var(--ds-text-2xl);
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+}
+
+.subtitle {
+  margin-top: var(--ds-space-2);
+  color: var(--ds-color-text-muted);
+}
+
+.grid {
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: var(--ds-space-4);
+}

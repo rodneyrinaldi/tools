@@ -1,0 +1,59 @@
+.surface {
+  position: relative;
+  background: var(--ds-glass-bg);
+  border: 1px solid var(--ds-glass-border);
+  border-radius: var(--ds-radius-lg);
+  box-shadow: var(--ds-shadow-md);
+  backdrop-filter: blur(var(--ds-glass-blur)) saturate(140%);
+  -webkit-backdrop-filter: blur(var(--ds-glass-blur)) saturate(140%);
+  overflow: hidden;
+}
+
+/* Reflexo sutil no topo do vidro. */
+.surface::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: var(--ds-glass-highlight);
+  pointer-events: none;
+}
+
+.padSm {
+  padding: var(--ds-space-4);
+}
+
+.padMd {
+  padding: var(--ds-space-5);
+}
+
+.padLg {
+  padding: var(--ds-space-6);
+}
+
+.strong {
+  background: var(--ds-glass-bg-strong);
+  border-color: var(--ds-glass-border-strong);
+}
+
+.interactive {
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+  transition:
+    background var(--ds-duration) var(--ds-ease),
+    border-color var(--ds-duration) var(--ds-ease),
+    box-shadow var(--ds-duration) var(--ds-ease),
+    transform var(--ds-duration) var(--ds-ease);
+}
+
+.interactive:hover {
+  background: var(--ds-glass-bg-hover);
+  border-color: var(--ds-glass-border-strong);
+  box-shadow: var(--ds-shadow-glow);
+  transform: translateY(-2px);
+}
+
+.interactive:focus-visible {
+  box-shadow: var(--ds-focus-ring), var(--ds-shadow-glow);
+}
