@@ -67,7 +67,8 @@ function fakeStream({ audio = true } = {}) {
   const stopTrack = vi.fn();
   return {
     getTracks: () => [{ stop: stopTrack }],
-    getAudioTracks: () => (audio ? [{ stop: stopTrack }] : []),
+    getAudioTracks: () =>
+      audio ? [{ stop: stopTrack, clone: () => ({ id: "clone", stop: stopTrack }) }] : [],
   } as unknown as MediaStream;
 }
 
@@ -114,8 +115,11 @@ class FakeRecognition {
   onerror: ((event: { error: string }) => void) | null = null;
   onstart: (() => void) | null = null;
   onend: (() => void) | null = null;
-  start() {
+  /** Faixa de áudio recebida em start() (navegadores com suporte). */
+  startedWith: unknown = undefined;
+  start(track?: unknown) {
     FakeRecognition.instance = this;
+    this.startedWith = track;
     queueMicrotask(() => this.onstart?.());
   }
   abort() {}
@@ -464,6 +468,68 @@ describe("<Teleprompter /> — câmera e gravação", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent(/negado/);
     expect(screen.getByRole("button", { name: "Gravar" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "▶ Ensaiar" })).toBeEnabled();
+  });
+});
+
+describe("<Teleprompter /> — voz com câmera", () => {
+  beforeEach(() => {
+    FakeRecognition.instance = null;
+    Object.assign(window, { webkitSpeechRecognition: FakeRecognition });
+  });
+  afterEach(() => {
+    Reflect.deleteProperty(window, "webkitSpeechRecognition");
+    vi.unstubAllGlobals();
+    Reflect.deleteProperty(navigator, "mediaDevices");
+  });
+
+  async function openCameraAndRehearse() {
+    installCamera();
+    renderWith(SCRIPT, { camera: true });
+    fireEvent.click(screen.getByRole("button", { name: "🎥 Abrir câmera" }));
+    await act(async () => {});
+    fireEvent.click(screen.getByRole("button", { name: "▶ Ensaiar" }));
+    await act(async () => {});
+  }
+
+  it("o reconhecimento usa o microfone já aberto pela câmera (cópia da faixa)", async () => {
+    await openCameraAndRehearse();
+    expect(FakeRecognition.instance?.startedWith).toEqual(
+      expect.objectContaining({ id: "clone" }),
+    );
+  });
+
+  it("microfone ocupado mostra aviso e oferece a velocidade", async () => {
+    await openCameraAndRehearse();
+    act(() => FakeRecognition.instance?.onerror?.({ error: "audio-capture" }));
+
+    expect(screen.getByRole("alert")).toHaveTextContent(/microfone está ocupado/);
+    fireEvent.click(screen.getByRole("button", { name: "Usar velocidade" }));
+    expect(screen.getByText("140 ppm")).toBeInTheDocument();
+  });
+
+  it("sem fala reconhecida por alguns segundos, avisa em vez de ficar parado sem explicação", async () => {
+    useFakeClock();
+    vi.useFakeTimers({
+      toFake: [
+        "setTimeout",
+        "clearTimeout",
+        "setInterval",
+        "clearInterval",
+        "requestAnimationFrame",
+        "cancelAnimationFrame",
+        "performance",
+        "Date",
+      ],
+    });
+    await openCameraAndRehearse();
+    expect(screen.queryByText(/Não estou ouvindo/)).not.toBeInTheDocument();
+
+    advance(9000, 500);
+    expect(screen.getByText(/Não estou ouvindo sua voz/)).toBeInTheDocument();
+
+    act(() => FakeRecognition.instance?.say("primeira linha"));
+    advance(1000, 500);
+    expect(screen.queryByText(/Não estou ouvindo/)).not.toBeInTheDocument();
   });
 });
 

@@ -49,7 +49,7 @@ A câmera só funciona em **HTTPS** (ou em `localhost`). Para usar no celular na
 
 Alternativa sem aviso de certificado: publicar o app num serviço com HTTPS (ex.: Vercel); o teleprompter roda inteiro no navegador.
 
-**Observação:** em alguns Android, gravar e o reconhecimento de voz não usam o microfone ao mesmo tempo. Se o indicador mostrar "Falha na voz", troque para **⏩ Velocidade**.
+**Voz com a câmera ligada:** o reconhecimento tenta usar o mesmo microfone da câmera. Alguns celulares não permitem isso; nesse caso aparece "Mic ocupado" ou, depois de alguns segundos sem reconhecer nada, "Não estou ouvindo sua voz". Toque em **Usar velocidade**: o texto passa a rolar sozinho e a gravação continua com som (ajuste o ritmo com − e +).
 
 ## Formatação do texto
 

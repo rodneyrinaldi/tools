@@ -322,10 +322,6 @@
     transform var(--ds-duration) var(--ds-ease);
 }
 
-.controls[hidden] {
-  display: none;
-}
-
 .focus .controls {
   position: absolute;
   inset: auto var(--ds-space-4) var(--ds-space-4);

@@ -15,15 +15,19 @@ type Recognition = {
   onerror: ((event: RecognitionErrorEvent) => void) | null;
   onstart: (() => void) | null;
   onend: (() => void) | null;
-  start: () => void;
+  /** Navegadores recentes aceitam uma faixa de áudio para reconhecer (em vez do microfone padrão). */
+  start: (audioTrack?: MediaStreamTrack) => void;
   abort: () => void;
 };
 type RecognitionConstructor = new () => Recognition;
 
-export type SpeechStatus = "idle" | "starting" | "listening" | "denied" | "error";
+export type SpeechStatus =
+  "idle" | "starting" | "listening" | "denied" | "busy" | "error";
 
 /** Palavras já finalizadas mantidas para dar contexto ao início de cada nova frase. */
 const FINAL_BUFFER_WORDS = 12;
+/** Sem nenhuma fala reconhecida por este tempo, `silent` vira true. */
+export const SILENCE_MS = 8000;
 
 function getRecognitionConstructor(): RecognitionConstructor | null {
   if (typeof window === "undefined") return null;
@@ -46,14 +50,21 @@ export function isSpeechRecognitionSupported() {
 export function useSpeechRecognition({
   active,
   lang = "pt-BR",
+  audioTrack = null,
   onTranscript,
 }: {
   active: boolean;
   lang?: string;
+  /**
+   * Faixa de áudio a reconhecer — a do microfone já aberto pela câmera. No celular, o
+   * reconhecimento costuma não conseguir abrir o microfone enquanto a câmera o usa.
+   */
+  audioTrack?: MediaStreamTrack | null;
   /** `final`: o reconhecedor fechou a frase (sem hipótese provisória pendente). */
   onTranscript: (heard: { text: string; final: boolean }) => void;
 }) {
   const [status, setStatus] = useState<SpeechStatus>("idle");
+  const [silent, setSilent] = useState(false);
   const onTranscriptRef = useRef(onTranscript);
   const forgetRef = useRef<() => void>(() => {});
   useEffect(() => {
@@ -72,8 +83,22 @@ export function useSpeechRecognition({
     // Resultados (índice/trecho) já ouvidos antes do último forgetHeard().
     let seen = { count: 0, lastTranscript: "" };
     let skip = { index: -1, chars: 0 };
+    let lastActivity = performance.now();
+    // Cópia da faixa: o reconhecimento pode encerrá-la sem afetar a gravação.
+    const track = audioTrack?.clone?.() ?? null;
 
     const recognition = new Constructor();
+    const startRecognition = () => {
+      if (track) {
+        try {
+          recognition.start(track);
+          return;
+        } catch {
+          // Navegador sem suporte a faixa própria: usa o microfone padrão.
+        }
+      }
+      recognition.start();
+    };
     recognition.lang = lang;
     recognition.continuous = true;
     recognition.interimResults = true;
@@ -89,6 +114,8 @@ export function useSpeechRecognition({
       setStatus("listening");
     };
     recognition.onresult = (event) => {
+      lastActivity = performance.now();
+      setSilent(false);
       let interim = "";
       for (let i = event.resultIndex; i < event.results.length; i++) {
         const result = event.results[i];
@@ -116,6 +143,10 @@ export function useSpeechRecognition({
       if (event.error === "not-allowed" || event.error === "service-not-allowed") {
         fatal = true;
         setStatus("denied");
+      } else if (event.error === "audio-capture") {
+        // Microfone ocupado (ex.: pela gravação) — insistir só repetiria o erro.
+        fatal = true;
+        setStatus("busy");
       } else if (event.error !== "no-speech" && event.error !== "aborted") {
         setStatus("error");
       }
@@ -125,15 +156,20 @@ export function useSpeechRecognition({
       // O navegador encerra após silêncio ou ~1 min; retoma em seguida.
       restartTimer = setTimeout(() => {
         try {
-          recognition.start();
+          startRecognition();
         } catch {
           setStatus("error");
         }
       }, 250);
     };
 
+    // Vigia de silêncio: avisa se nada for reconhecido por SILENCE_MS.
+    const silenceTimer = setInterval(() => {
+      setSilent(performance.now() - lastActivity > SILENCE_MS);
+    }, 1000);
+
     try {
-      recognition.start();
+      startRecognition();
     } catch {
       queueMicrotask(() => setStatus("error"));
     }
@@ -141,16 +177,20 @@ export function useSpeechRecognition({
     return () => {
       stopped = true;
       clearTimeout(restartTimer);
+      clearInterval(silenceTimer);
       forgetRef.current = () => {};
       recognition.onend = null;
       recognition.abort();
+      track?.stop();
     };
-  }, [active, lang]);
+  }, [active, lang, audioTrack]);
 
   const forgetHeard = useCallback(() => forgetRef.current(), []);
 
   return {
     status: active ? (status === "idle" ? "starting" : status) : ("idle" as SpeechStatus),
+    /** Rodando sem nenhuma fala reconhecida há mais de SILENCE_MS. */
+    silent: active && silent,
     forgetHeard,
   };
 }

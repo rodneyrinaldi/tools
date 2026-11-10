@@ -44,6 +44,8 @@ export type PresenterProps = {
   countdown: number;
   drive: Drive;
   voiceStatus: SpeechStatus;
+  /** Modo voz rodando sem nenhuma fala reconhecida há alguns segundos. */
+  voiceSilent: boolean;
   voiceSupported: boolean;
   wordsPerMinute: number;
   remainingMs: number | null;
@@ -75,7 +77,16 @@ const VOICE_LABEL: Record<SpeechStatus, string> = {
   starting: "Ligando microfone…",
   listening: "Ouvindo",
   denied: "Microfone bloqueado",
+  busy: "Microfone ocupado",
   error: "Falha no reconhecimento",
+};
+
+const VOICE_PROBLEM_MESSAGE: Partial<Record<SpeechStatus, string>> = {
+  denied:
+    "O navegador bloqueou o microfone. Libere o acesso no ícone da barra de endereço ou use a velocidade.",
+  busy: "O microfone está ocupado (pela câmera/gravação) e o reconhecimento de voz não consegue usá-lo neste aparelho. Use a velocidade — a gravação continua com som.",
+  error:
+    "O reconhecimento de voz falhou (sem internet?). Tente novamente ou use a velocidade.",
 };
 
 function PresenterView({
@@ -85,6 +96,7 @@ function PresenterView({
   countdown,
   drive,
   voiceStatus,
+  voiceSilent,
   voiceSupported,
   wordsPerMinute,
   remainingMs,
@@ -107,9 +119,11 @@ function PresenterView({
   const columnRef = useRef<HTMLDivElement>(null);
   const viewportRef = useRef<HTMLDivElement>(null);
   const idle = useIdle(focus && !camera);
-  const voiceProblem =
-    drive === "voice" && (voiceStatus === "denied" || voiceStatus === "error");
-  const controlsHidden = focus && !camera && idle && phase === "running" && !voiceProblem;
+  const voiceProblem = drive === "voice" && voiceStatus in VOICE_PROBLEM_MESSAGE;
+  const voiceUnheard =
+    drive === "voice" && !voiceProblem && voiceSilent && phase === "running";
+  const controlsHidden =
+    focus && !camera && idle && phase === "running" && !voiceProblem && !voiceUnheard;
   const progress = lines.length > 1 ? lineIndex / (lines.length - 1) : 1;
   const recording = camera !== null && camera.recorder !== "inactive";
 
@@ -243,9 +257,17 @@ function PresenterView({
 
         {voiceProblem && phase !== "finished" && (
           <div className={styles.alert} role="alert">
-            {voiceStatus === "denied"
-              ? "O navegador bloqueou o microfone. Libere o acesso no ícone da barra de endereço ou use a velocidade."
-              : "O reconhecimento de voz falhou (sem internet?). Tente novamente ou use a velocidade."}
+            {VOICE_PROBLEM_MESSAGE[voiceStatus]}
+            <Button size="sm" variant="secondary" onClick={onSwitchDrive}>
+              Usar velocidade
+            </Button>
+          </div>
+        )}
+
+        {voiceUnheard && (
+          <div className={styles.alert} role="alert">
+            Não estou ouvindo sua voz: o texto só anda quando a fala é reconhecida. Fale
+            perto do microfone — ou use a velocidade.
             <Button size="sm" variant="secondary" onClick={onSwitchDrive}>
               Usar velocidade
             </Button>
@@ -280,94 +302,92 @@ function PresenterView({
         />
       )}
 
-      <div
-        className={styles.controls}
-        hidden={Boolean(camera)}
-        aria-hidden={controlsHidden || undefined}
-      >
-        <div className={styles.group}>
-          <Button
-            size="sm"
-            variant="ghost"
-            onClick={onPrevious}
-            aria-label="Voltar uma linha (↑)"
-          >
-            ↑
-          </Button>
-          <Button
-            size="sm"
-            variant="primary"
-            onClick={onToggle}
-            disabled={phase === "finished"}
-            className={styles.playButton}
-          >
-            {phase === "running"
-              ? "Pausar"
-              : phase === "countdown"
-                ? "Começar"
-                : "Continuar"}
-          </Button>
-          <Button
-            size="sm"
-            variant="ghost"
-            onClick={onNext}
-            aria-label="Avançar uma linha (↓)"
-          >
-            ↓
-          </Button>
-        </div>
-
-        {drive === "voice" ? (
-          <span className={styles.voice} data-status={voiceStatus} aria-live="polite">
-            <span className={styles.voiceDot} aria-hidden />
-            {VOICE_LABEL[voiceStatus]}
-          </span>
-        ) : (
+      {!camera && (
+        <div className={styles.controls} aria-hidden={controlsHidden || undefined}>
           <div className={styles.group}>
             <Button
               size="sm"
               variant="ghost"
-              onClick={onSlower}
-              aria-label="Mais lento (−)"
+              onClick={onPrevious}
+              aria-label="Voltar uma linha (↑)"
             >
-              −
+              ↑
             </Button>
-            <span className={styles.speed} aria-live="polite">
-              {wordsPerMinute} ppm
-            </span>
+            <Button
+              size="sm"
+              variant="primary"
+              onClick={onToggle}
+              disabled={phase === "finished"}
+              className={styles.playButton}
+            >
+              {phase === "running"
+                ? "Pausar"
+                : phase === "countdown"
+                  ? "Começar"
+                  : "Continuar"}
+            </Button>
             <Button
               size="sm"
               variant="ghost"
-              onClick={onFaster}
-              aria-label="Mais rápido (+)"
+              onClick={onNext}
+              aria-label="Avançar uma linha (↓)"
             >
-              +
+              ↓
             </Button>
           </div>
-        )}
 
-        <span className={styles.status}>
-          {lineIndex + 1}/{lines.length}
-          {remainingMs !== null && ` · ${formatDuration(remainingMs)}`}
-        </span>
-
-        <div className={styles.group}>
-          {voiceSupported && (
-            <Button size="sm" variant="ghost" onClick={onSwitchDrive}>
-              {drive === "voice" ? "⏩ Velocidade" : "🎙 Voz"}
-            </Button>
+          {drive === "voice" ? (
+            <span className={styles.voice} data-status={voiceStatus} aria-live="polite">
+              <span className={styles.voiceDot} aria-hidden />
+              {VOICE_LABEL[voiceStatus]}
+            </span>
+          ) : (
+            <div className={styles.group}>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={onSlower}
+                aria-label="Mais lento (−)"
+              >
+                −
+              </Button>
+              <span className={styles.speed} aria-live="polite">
+                {wordsPerMinute} ppm
+              </span>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={onFaster}
+                aria-label="Mais rápido (+)"
+              >
+                +
+              </Button>
+            </div>
           )}
-          <Button size="sm" variant="ghost" onClick={onRestart}>
-            Reiniciar
-          </Button>
-          <Button size="sm" variant="secondary" onClick={onToggleFocus}>
-            {focus ? "Encaixar" : "Modo foco"}
-          </Button>
-          <Button size="sm" variant="secondary" onClick={onExit}>
-            Sair
-          </Button>
+
+          <span className={styles.status}>
+            {lineIndex + 1}/{lines.length}
+            {remainingMs !== null && ` · ${formatDuration(remainingMs)}`}
+          </span>
+
+          <div className={styles.group}>
+            {voiceSupported && (
+              <Button size="sm" variant="ghost" onClick={onSwitchDrive}>
+                {drive === "voice" ? "⏩ Velocidade" : "🎙 Voz"}
+              </Button>
+            )}
+            <Button size="sm" variant="ghost" onClick={onRestart}>
+              Reiniciar
+            </Button>
+            <Button size="sm" variant="secondary" onClick={onToggleFocus}>
+              {focus ? "Encaixar" : "Modo foco"}
+            </Button>
+            <Button size="sm" variant="secondary" onClick={onExit}>
+              Sair
+            </Button>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

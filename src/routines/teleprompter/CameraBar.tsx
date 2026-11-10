@@ -12,6 +12,7 @@ const VOICE_SHORT: Record<SpeechStatus, string> = {
   starting: "Ligando…",
   listening: "Ouvindo",
   denied: "Mic bloqueado",
+  busy: "Mic ocupado",
   error: "Falha na voz",
 };
 

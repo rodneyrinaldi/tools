@@ -72,7 +72,9 @@ Regras de inserção:
    - **Proteção contra vai e volta:** o texto só volta com frase **finalizada** pelo reconhecedor, recuo de ≥ 4 palavras e ≥ 3 palavras significativas casadas — correções de hipóteses provisórias nunca fazem o texto voltar. Saltos para frente de mais de 3 palavras precisam se repetir na transcrição seguinte. Remedir o texto (fonte, redimensionar) não altera o ponto da voz.
    - **Modo velocidade:** cada linha leva `palavras ÷ ppm` para passar pela guia (+ pausas, se "Seguram o texto").
 6. **Reposicionar a qualquer momento** com `↑`/`↓` (uma linha), roda do mouse/trackpad (fino) ou passador de slides. No modo voz, a escuta recomeça a partir do novo ponto, descartando o que já foi ouvido.
-7. Indicador do microfone (ligando, ouvindo, bloqueado, falha). Microfone bloqueado ou falha mostram um aviso com **Usar velocidade**.
+7. Indicador do microfone (ligando, ouvindo, bloqueado, ocupado, falha). Microfone bloqueado, ocupado (`audio-capture`) ou falha mostram um aviso com **Usar velocidade**.
+   - Com a câmera ligada, o reconhecimento recebe uma cópia da faixa de áudio da câmera (`start(audioTrack)`, onde o navegador suporta), para não disputar o microfone com a gravação.
+   - Se o modo voz estiver rodando sem nenhuma fala reconhecida por 8 s, aparece "Não estou ouvindo sua voz" com **Usar velocidade**; some quando a fala volta a ser reconhecida.
 8. Alternar entre voz e velocidade durante a apresentação (botão ou `V`), mantendo a posição.
 9. Ao final, tela "Fim" com Reiniciar e Voltar ao editor.
 10. **Visualização encaixada:** dentro da moldura da rotina, com o design do projeto.
@@ -137,7 +139,8 @@ Etiquetas entre chaves formatam trechos do roteiro: `{amarelo}texto{/}`, `{grand
 - [x] Rolagem contínua (sem saltos), com linhas já lidas visíveis acima da guia e próximas abaixo.
 - [x] Modo voz: o texto avança conforme as palavras ditas, tolera erros e palavras puladas, ignora fala fora do roteiro e volta quando um trecho é repetido.
 - [x] Modo voz: correções provisórias do reconhecedor e saltos isolados não fazem o texto ir e voltar.
-- [x] Modo voz: microfone bloqueado mostra aviso e permite trocar para velocidade.
+- [x] Modo voz: microfone bloqueado ou ocupado mostra aviso e permite trocar para velocidade.
+- [x] Modo voz com câmera: reconhecimento usa a faixa de áudio da câmera; silêncio prolongado gera aviso.
 - [x] Pausar e continuar de onde parou; reposicionar por setas, roda do mouse e passador.
 - [x] Reiniciar, sair, alternar voz/velocidade e ajustar velocidade por botão e teclado.
 - [x] Modo foco em tela cheia, sem nenhum elemento além do texto e controles autoocultáveis.

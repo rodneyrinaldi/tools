@@ -219,6 +219,7 @@ export function Session({
 
   const voiceStatus = useSpeechRecognition({
     active: drive === "voice" && playback.phase === "running",
+    audioTrack: camera.stream?.getAudioTracks?.()[0] ?? null,
     onTranscript: (heard) => {
       const { lines, words } = latest.current;
       const e = engine.current;
@@ -401,6 +402,7 @@ export function Session({
       countdown={playback.countdown}
       drive={drive}
       voiceStatus={voiceStatus.status}
+      voiceSilent={voiceStatus.silent}
       voiceSupported={isSpeechRecognitionSupported()}
       wordsPerMinute={wordsPerMinute}
       remainingMs={remainingMs}
