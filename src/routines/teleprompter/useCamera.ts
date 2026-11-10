@@ -6,11 +6,52 @@ import { cameraErrorMessage, INSECURE_CONTEXT_MESSAGE, type Facing } from "./cam
 type CameraState = {
   stream: MediaStream | null;
   error: string | null;
+  /** O stream tem microfone (se não tiver, a gravação sai sem som). */
+  hasAudio: boolean;
   /** Quantas câmeras o aparelho tem (para oferecer a troca frontal/traseira). */
   cameraCount: number;
 };
 
-const IDLE: CameraState = { stream: null, error: null, cameraCount: 0 };
+const IDLE: CameraState = { stream: null, error: null, hasAudio: false, cameraCount: 0 };
+
+/** Erros em que vale tentar de novo com menos exigências (não reabre o pedido de permissão). */
+const RETRYABLE = new Set([
+  "NotFoundError",
+  "OverconstrainedError",
+  "NotReadableError",
+  "AbortError",
+]);
+
+/**
+ * Tentativas em ordem: alta resolução com microfone → resolução livre com microfone →
+ * só vídeo. Alguns aparelhos recusam 1080p, outros não têm/negam o microfone.
+ */
+function attempts(facing: Facing): MediaStreamConstraints[] {
+  const audio = { echoCancellation: true, noiseSuppression: true };
+  return [
+    {
+      video: { facingMode: facing, width: { ideal: 1920 }, height: { ideal: 1080 } },
+      audio,
+    },
+    { video: { facingMode: facing }, audio },
+    { video: { facingMode: facing }, audio: false },
+  ];
+}
+
+async function openCamera(facing: Facing): Promise<MediaStream> {
+  let firstError: unknown;
+  for (const constraints of attempts(facing)) {
+    try {
+      return await navigator.mediaDevices.getUserMedia(constraints);
+    } catch (error) {
+      firstError ??= error;
+      const name =
+        error instanceof Error || error instanceof DOMException ? error.name : "";
+      if (!RETRYABLE.has(name)) break;
+    }
+  }
+  throw firstError;
+}
 
 /** Liga câmera + microfone enquanto `enabled`; troca de câmera ao mudar `facing`. */
 export function useCamera(enabled: boolean, facing: Facing): CameraState {
@@ -30,11 +71,7 @@ export function useCamera(enabled: boolean, facing: Facing): CameraState {
       };
     }
 
-    navigator.mediaDevices
-      .getUserMedia({
-        video: { facingMode: facing, width: { ideal: 1920 }, height: { ideal: 1080 } },
-        audio: { echoCancellation: true, noiseSuppression: true },
-      })
+    openCamera(facing)
       .then(async (stream) => {
         if (cancelled) {
           stream.getTracks().forEach((track) => track.stop());
@@ -47,6 +84,7 @@ export function useCamera(enabled: boolean, facing: Facing): CameraState {
         setState({
           stream,
           error: null,
+          hasAudio: (stream.getAudioTracks?.().length ?? 0) > 0,
           cameraCount: devices.filter((device) => device.kind === "videoinput").length,
         });
       })

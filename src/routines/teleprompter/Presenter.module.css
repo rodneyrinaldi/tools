@@ -188,6 +188,18 @@
   bottom: 168px;
 }
 
+.cameraStatus {
+  position: absolute;
+  inset: auto var(--ds-space-4) 196px;
+  z-index: 2;
+  padding: var(--ds-space-2) var(--ds-space-3);
+  font-size: var(--ds-text-sm);
+  text-align: center;
+  color: var(--ds-color-text);
+  background: rgb(0 0 0 / 0.6);
+  border-radius: var(--ds-radius-md);
+}
+
 .withCamera .alert {
   bottom: 184px;
 }

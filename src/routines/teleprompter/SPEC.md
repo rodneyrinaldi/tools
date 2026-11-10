@@ -113,7 +113,7 @@ Etiquetas entre chaves formatam trechos do roteiro: `{amarelo}texto{/}`, `{grand
 
 ### Câmera e gravação (modo câmera)
 
-1. Editor: **Câmera** desligada/ligada; com câmera: **Escurecer a imagem** (leve 35%, médio 55%, forte 72%) e **Usar câmera** frontal/traseira. O botão de início vira **🎥 Abrir câmera** e a apresentação ocupa sempre a tela toda.
+1. Editor: **Câmera** desligada/ligada; com câmera: **Escurecer a imagem** (leve 35%, médio 55%, forte 72%) e **Usar câmera** frontal/traseira. O botão de início vira **🎥 Abrir câmera**; com a câmera desligada, **🎥 Com câmera** liga e abre num toque. A apresentação com câmera sempre cobre a tela toda (mesmo sem a tela cheia do navegador); a tela cheia do navegador só é pedida no primeiro toque em Gravar/Ensaiar, depois da permissão (no Android, o pedido de permissão derruba a tela cheia).
 2. A câmera aparece ao fundo, coberta pela camada escura; o texto aparece por cima em cor viva, com sombra para legibilidade. A frontal é espelhada na tela (como um espelho); **a gravação sai sem espelhar e sem o texto** (só câmera + microfone).
 3. Ao abrir, o texto fica **parado** aguardando:
    - **● Gravar** (botão circular grande, central): contagem regressiva → começa a gravar e a rolar o texto a partir da posição atual (do início, se o roteiro já tinha terminado);
@@ -123,8 +123,9 @@ Etiquetas entre chaves formatam trechos do roteiro: `{amarelo}texto{/}`, `{grand
 6. Gravações ficam na memória do navegador e aparecem no editor (**Gravações (N)**, salva/não salva, baixar, compartilhar, remover). Fechar a página com gravação não salva pede confirmação. **Sair** gravando encerra e guarda a gravação.
 7. Formato: MP4 quando o navegador suportar (Safari, Chrome recente), senão WebM. Nome `teleprompter-AAAAMMDD-HHMMSS.mp4|webm`.
 8. Controles pensados para toque: botões de 56px (central 76px) na parte de baixo, área segura do celular respeitada; ↑ ↓, voz/velocidade, ± ppm e **🔄 trocar câmera** (quando há mais de uma, fora da gravação) numa linha secundária.
-9. Sem permissão/câmera/HTTPS: aviso explicando o motivo; **Gravar** fica desabilitado e o ensaio continua funcionando.
-10. Atalho `G`: gravar / parar gravação.
+9. Sem permissão/câmera/HTTPS: aviso explicando o motivo; **Gravar** fica desabilitado e o ensaio continua funcionando. Enquanto a câmera liga, aparece "Ligando a câmera… permita o acesso".
+10. Se o aparelho recusar a configuração pedida, tenta de novo com resolução livre e, por fim, só com vídeo (avisando "Sem microfone: o vídeo será gravado sem som"). Permissão negada não gera novas tentativas.
+11. Atalho `G`: gravar / parar gravação.
 
 ## Critérios de aceite
 
@@ -154,6 +155,8 @@ Etiquetas entre chaves formatam trechos do roteiro: `{amarelo}texto{/}`, `{grand
 - [x] Gravar inicia a gravação (após a contagem); pausar/continuar afeta gravação e texto juntos; Parar entrega a gravação.
 - [x] Gravações sobrevivem a sair da apresentação, podem ser baixadas/compartilhadas/removidas e o fechamento da página avisa se houver não salvas.
 - [x] Sem acesso à câmera: aviso, Gravar desabilitado, ensaio disponível.
+- [x] Modo câmera cobre a tela mesmo sem tela cheia do navegador; tela cheia só após a permissão, no toque em Gravar/Ensaiar.
+- [x] Câmera tenta configurações mais simples e grava só vídeo quando não há microfone.
 - [x] Usa componentes e tokens de `@/design-system`.
 
 ## Suposições

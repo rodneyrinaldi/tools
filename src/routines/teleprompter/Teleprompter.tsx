@@ -43,15 +43,16 @@ export default function Teleprompter() {
     };
   }, []);
 
-  // Sem rolagem da página por trás do modo foco.
+  // Sem rolagem da página por trás do modo foco (e do modo câmera, que sempre cobre a tela).
+  const coversScreen = focus || (mode.kind === "presenting" && preferences.camera);
   useEffect(() => {
-    if (!focus) return;
+    if (!coversScreen) return;
     const previous = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     return () => {
       document.body.style.overflow = previous;
     };
-  }, [focus]);
+  }, [coversScreen]);
 
   // Avisa antes de fechar a página com gravações não salvas.
   const hasUnsaved = takes.some((take) => !take.saved);
@@ -73,8 +74,8 @@ export default function Teleprompter() {
   );
 
   function start(withFocus: boolean) {
-    // Com câmera, a apresentação sempre ocupa a tela toda.
-    if (withFocus || preferences.camera) enterFocus();
+    // Com câmera, a tela cheia do navegador só é pedida depois (ver Session).
+    if (withFocus) enterFocus();
     setMode({ kind: "presenting", id: Date.now() });
   }
 
@@ -123,6 +124,9 @@ export default function Teleprompter() {
         focus={focus}
         onToggleFocus={focus ? leaveFocus : enterFocus}
         onExit={exit}
+        onRequestFullscreen={() => {
+          document.documentElement.requestFullscreen?.().catch(() => {});
+        }}
       />
     );
   }

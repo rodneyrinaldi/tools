@@ -409,7 +409,7 @@ export function Editor({
         </Button>
         <span className={styles.spacer} />
         {preferences.camera ? (
-          <Button variant="primary" onClick={() => onStart(true)} disabled={isEmpty}>
+          <Button variant="primary" onClick={() => onStart(false)} disabled={isEmpty}>
             🎥 Abrir câmera
           </Button>
         ) : (
@@ -417,8 +417,18 @@ export function Editor({
             <Button variant="secondary" onClick={() => onStart(false)} disabled={isEmpty}>
               Iniciar
             </Button>
-            <Button variant="primary" onClick={() => onStart(true)} disabled={isEmpty}>
+            <Button variant="secondary" onClick={() => onStart(true)} disabled={isEmpty}>
               Iniciar em modo foco
+            </Button>
+            <Button
+              variant="primary"
+              onClick={() => {
+                onChange({ camera: true });
+                onStart(false);
+              }}
+              disabled={isEmpty}
+            >
+              🎥 Com câmera
             </Button>
           </>
         )}

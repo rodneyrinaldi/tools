@@ -63,13 +63,22 @@ class FakeMediaRecorder {
   }
 }
 
-function installCamera() {
+function fakeStream({ audio = true } = {}) {
   const stopTrack = vi.fn();
-  const stream = { getTracks: () => [{ stop: stopTrack }] } as unknown as MediaStream;
+  return {
+    getTracks: () => [{ stop: stopTrack }],
+    getAudioTracks: () => (audio ? [{ stop: stopTrack }] : []),
+  } as unknown as MediaStream;
+}
+
+const mediaError = (name: string) => Object.assign(new Error(name), { name });
+
+function installCamera(getUserMedia = vi.fn().mockResolvedValue(fakeStream())) {
+  const stopTrack = vi.fn();
   Object.defineProperty(navigator, "mediaDevices", {
     configurable: true,
     value: {
-      getUserMedia: vi.fn().mockResolvedValue(stream),
+      getUserMedia,
       enumerateDevices: vi
         .fn()
         .mockResolvedValue([{ kind: "videoinput" }, { kind: "videoinput" }]),
@@ -389,6 +398,54 @@ describe("<Teleprompter /> — câmera e gravação", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Sair" }));
     expect(await screen.findByText("Gravações (1)")).toBeInTheDocument();
+  });
+
+  it("abre com um toque em '🎥 Com câmera', sem pedir tela cheia antes da permissão", async () => {
+    installCamera();
+    const requestFullscreen = vi.fn().mockResolvedValue(undefined);
+    document.documentElement.requestFullscreen = requestFullscreen;
+    renderWith(SCRIPT, { drive: "speed" });
+
+    fireEvent.click(screen.getByRole("button", { name: "🎥 Com câmera" }));
+    expect(screen.getByText(/Ligando a câmera/)).toBeInTheDocument();
+    await act(async () => {});
+
+    expect(requestFullscreen).not.toHaveBeenCalled();
+    expect(document.querySelector("video")).toBeInTheDocument();
+    // A tela cheia é pedida no toque em Gravar.
+    fireEvent.click(screen.getByRole("button", { name: "Gravar" }));
+    expect(requestFullscreen).toHaveBeenCalled();
+    Reflect.deleteProperty(document.documentElement, "requestFullscreen");
+  });
+
+  it("tenta de novo com menos exigências e, sem microfone, grava só vídeo", async () => {
+    const getUserMedia = vi
+      .fn()
+      .mockRejectedValueOnce(mediaError("OverconstrainedError"))
+      .mockRejectedValueOnce(mediaError("NotFoundError"))
+      .mockResolvedValueOnce(fakeStream({ audio: false }));
+    installCamera(getUserMedia);
+    renderWith(SCRIPT, { drive: "speed", camera: true });
+    fireEvent.click(screen.getByRole("button", { name: "🎥 Abrir câmera" }));
+    await act(async () => {});
+
+    expect(getUserMedia).toHaveBeenCalledTimes(3);
+    expect(getUserMedia).toHaveBeenLastCalledWith({
+      video: { facingMode: "user" },
+      audio: false,
+    });
+    expect(screen.getByText(/Sem microfone/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Gravar" })).toBeEnabled();
+  });
+
+  it("permissão negada não insiste em novas tentativas", async () => {
+    const getUserMedia = vi.fn().mockRejectedValue(mediaError("NotAllowedError"));
+    installCamera(getUserMedia);
+    renderWith(SCRIPT, { drive: "speed", camera: true });
+    fireEvent.click(screen.getByRole("button", { name: "🎥 Abrir câmera" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(/negado/);
+    expect(getUserMedia).toHaveBeenCalledTimes(1);
   });
 
   it("sem acesso à câmera, avisa e mantém o ensaio do texto", async () => {

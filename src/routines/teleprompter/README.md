@@ -20,8 +20,8 @@ O roteiro e as preferências ficam salvos neste navegador; **Limpar** pede um se
 
 ## Gravar com a câmera
 
-1. No editor, ligue **Câmera** e escolha quanto **escurecer a imagem** (leve, médio, forte) e a câmera **frontal** ou **traseira**.
-2. Toque em **🎥 Abrir câmera** e permita o acesso à câmera e ao microfone. Você se vê ao fundo, escurecido, com o texto por cima em cor viva.
+1. No editor, toque em **🎥 Com câmera** (ou ligue **Câmera** para escolher antes quanto **escurecer a imagem** e a câmera **frontal** ou **traseira**, e toque em **🎥 Abrir câmera**).
+2. Permita o acesso à câmera e ao microfone quando o navegador perguntar. Você se vê ao fundo, escurecido, com o texto por cima em cor viva.
 3. Use os botões grandes na parte de baixo:
 
 | Botão                   | O que faz                                                            |

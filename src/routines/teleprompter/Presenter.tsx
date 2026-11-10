@@ -18,6 +18,7 @@ import styles from "./Presenter.module.css";
 export type CameraPresentation = {
   stream: MediaStream | null;
   error: string | null;
+  hasAudio: boolean;
   /** Câmera frontal aparece espelhada (como um espelho); a gravação sai normal. */
   mirrored: boolean;
   dim: DimLevel;
@@ -192,6 +193,19 @@ function PresenterView({
                 </>
               )}
             </div>
+          </div>
+        )}
+
+        {camera && !camera.stream && !camera.error && (
+          <div className={styles.cameraStatus} role="status">
+            Ligando a câmera… Se o navegador perguntar, permita o acesso à câmera e ao
+            microfone.
+          </div>
+        )}
+
+        {camera?.stream && !camera.hasAudio && (
+          <div className={styles.cameraStatus} role="status">
+            Sem microfone: o vídeo será gravado sem som.
           </div>
         )}
 

@@ -54,6 +54,8 @@ type SessionProps = {
   focus: boolean;
   onToggleFocus: () => void;
   onExit: () => void;
+  /** Pede tela cheia ao navegador (precisa de um toque/clique da pessoa). */
+  onRequestFullscreen: () => void;
 };
 
 /** Uma apresentação em andamento: rolagem contínua conduzida pela voz ou por velocidade. */
@@ -70,6 +72,7 @@ export function Session({
   focus,
   onToggleFocus,
   onExit,
+  onRequestFullscreen,
 }: SessionProps) {
   const [layout, setLayout] = useState<Layout | null>(null);
   const [wordsPerMinute, setWordsPerMinute] = useState(initialWordsPerMinute);
@@ -258,8 +261,19 @@ export function Session({
     dispatch({ type: "restart", countdown });
   }, [commit, forgetHeard, countdown]);
 
+  /**
+   * No modo câmera, a tela cheia do navegador é pedida no primeiro toque em Gravar/Ensaiar —
+   * e não ao abrir: no Android, o pedido de permissão da câmera derruba a tela cheia.
+   */
+  function fullscreenOnGesture() {
+    if (cameraOptions && typeof document !== "undefined" && !document.fullscreenElement) {
+      onRequestFullscreen();
+    }
+  }
+
   /** Pausa/continua o texto e, se estiver gravando, a gravação junto. */
   function togglePlay() {
+    if (playback.phase === "paused") fullscreenOnGesture();
     if (playback.phase === "countdown" && recordIntent.current) {
       recordIntent.current = false;
       recorder.start();
@@ -274,6 +288,7 @@ export function Session({
   /** Gravar: contagem regressiva e então grava e rola o texto a partir da posição atual. */
   function record() {
     if (!camera.stream || !recorder.supported || recorder.state !== "inactive") return;
+    fullscreenOnGesture();
     setLastTake(null);
     if (playback.phase === "finished") {
       engine.current = { ...engine.current, target: 0, cursor: 0, pending: null };
@@ -389,12 +404,14 @@ export function Session({
       voiceSupported={isSpeechRecognitionSupported()}
       wordsPerMinute={wordsPerMinute}
       remainingMs={remainingMs}
-      focus={focus}
+      // O modo câmera sempre cobre a tela inteira, com ou sem a tela cheia do navegador.
+      focus={focus || Boolean(cameraOptions)}
       textColor={textColor}
       camera={
         cameraOptions && {
           stream: camera.stream,
           error: camera.error,
+          hasAudio: camera.hasAudio,
           mirrored: facing === "user",
           dim: cameraOptions.dim,
           recorder: recorder.state,
