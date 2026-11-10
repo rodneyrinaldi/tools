@@ -56,7 +56,9 @@ docs/adr/             decisões de arquitetura
 - **Carregamento sob demanda:** cada rotina é carregada com `React.lazy` só quando aberta.
 - **Guarda de estrutura:** `registry.test.ts` falha se uma pasta não estiver registrada ou se faltar `README.md`, `SPEC.md` ou testes.
 
-Detalhes e alternativas consideradas: [ADR 0001](docs/adr/0001-arquitetura-de-rotinas.md).
+- **Acesso a arquivos locais:** rotinas que trabalham com arquivos do computador usam Server Actions que só aceitam `localhost` — funcionam com o app rodando na própria máquina.
+
+Detalhes e alternativas consideradas: [ADR 0001](docs/adr/0001-arquitetura-de-rotinas.md) e [ADR 0002](docs/adr/0002-rotinas-com-acesso-a-arquivos-locais.md).
 
 ## Design system
 

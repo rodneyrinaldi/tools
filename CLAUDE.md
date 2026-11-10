@@ -48,7 +48,8 @@ docs/adr/              # decisões de arquitetura
 3. **Isolamento.** Uma rotina não importa nada de outra rotina. Código compartilhado sobe para `src/design-system`, `src/hooks` ou `src/lib`.
 4. **Registro.** Toda rotina é adicionada em `src/routines/registry.ts`. O teste `registry.test.ts` falha se pasta e registro divergirem ou se faltar `README.md`/`SPEC.md`/teste.
 5. **Tela cheia:** uma rotina pode cobrir a tela toda (ex.: modo foco do teleprompter) renderizando via `createPortal` em `document.body` — nunca com `position: fixed` dentro do `Surface`, cujo `backdrop-filter` prende elementos fixos.
-6. **Lógica pura separada** da UI (ex.: `greeting.ts`) para ser testada sem renderizar.
+6. **Acesso a arquivos locais:** rotinas que leem/gravam no disco ou executam programas usam Server Actions em `src/routines/<id>/server/actions.ts` (`"use server"`, exportando só as ações), que **recusam host diferente de localhost**. Nunca crie Route Handlers. Ver `docs/adr/0002-rotinas-com-acesso-a-arquivos-locais.md`.
+7. **Lógica pura separada** da UI (ex.: `greeting.ts`) para ser testada sem renderizar.
 
 ## Design system
 

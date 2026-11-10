@@ -21,7 +21,7 @@ Fonte: `src/design-system/`. Spec: `specs/002-design-system.md`.
 | ------------------ | --------------------------------------------- | ---------------------------------------------------------------------------- |
 | `Surface`          | Painel de vidro; base de cards e seções       | `as`, `padding: none\|sm\|md\|lg`, `variant: default\|strong`, `interactive` |
 | `Button`           | Ações                                         | `variant: primary\|secondary\|ghost`, `size: sm\|md`                         |
-| `Badge`            | Status/etiquetas                              | `tone: neutral\|accent\|success\|warning`                                    |
+| `Badge`            | Status/etiquetas                              | `tone: neutral\|accent\|success\|warning\|danger`                            |
 | `TextField`        | Input com label e dica acessíveis             | `label` (obrigatório), `hint`, demais props de `<input>`                     |
 | `TextArea`         | Texto longo com label e dica                  | `label` (obrigatório), `hint`, `ref`, demais props de `<textarea>`           |
 | `SegmentedControl` | Escolha exclusiva entre poucas opções (radio) | `label`, `options`, `value`, `onChange`                                      |

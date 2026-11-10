@@ -30,3 +30,9 @@
   border-color: rgb(251 191 36 / 0.3);
   color: var(--ds-color-warning);
 }
+
+.danger {
+  background: rgb(248 113 113 / 0.1);
+  border-color: rgb(248 113 113 / 0.35);
+  color: var(--ds-color-danger);
+}

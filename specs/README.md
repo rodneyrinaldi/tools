@@ -17,6 +17,7 @@ Desenvolvimento orientado a especificação: **nenhuma rotina ou feature é impl
 ### Rotinas
 
 - [teleprompter — Teleprompter](../src/routines/teleprompter/SPEC.md)
+- [pdf-tools — Ferramentas de PDF](../src/routines/pdf-tools/SPEC.md)
 - [hello-world — Olá Mundo](../src/routines/hello-world/SPEC.md)
 
 ## Ciclo

@@ -3,7 +3,7 @@ import { cx } from "../cx";
 import styles from "./Badge.module.css";
 
 export type BadgeProps = ComponentPropsWithoutRef<"span"> & {
-  tone?: "neutral" | "accent" | "success" | "warning";
+  tone?: "neutral" | "accent" | "success" | "warning" | "danger";
 };
 
 export function Badge({ tone = "neutral", className, ...rest }: BadgeProps) {
