@@ -100,3 +100,5 @@ O botão funciona como **liga/desliga**: se o roteiro já tem marcações, ele v
 | `storage.ts`              | persistência local das preferências                              |
 
 A posição do texto muda a cada quadro e é aplicada direto no DOM (`transform`), sem re-renderizar; o React só re-renderiza quando a linha sob a guia muda. A posição também é guardada em "tokens" para continuar correta quando o texto é re-quebrado (redimensionar a janela ou trocar de visualização).
+
+Para reproduzir esta funcionalidade em outro projeto (seguindo as regras e o design system de lá), use o prompt portável em [`docs/prompts/teleprompter-portavel.md`](../../../docs/prompts/teleprompter-portavel.md).
