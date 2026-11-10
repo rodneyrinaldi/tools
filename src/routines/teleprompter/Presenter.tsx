@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type RefObject } from "react";
+import { useEffect, useRef, useState, type CSSProperties, type RefObject } from "react";
 import { createPortal } from "react-dom";
 import { Button, cx } from "@/design-system";
 import { DIM_OPACITY, type DimLevel, type RecorderState, type Take } from "./camera";
@@ -51,6 +51,10 @@ export type PresenterProps = {
   remainingMs: number | null;
   focus: boolean;
   textColor: BaseTextColor;
+  /** Multiplicador do tamanho da letra. */
+  fontScale: number;
+  onSmallerText: () => void;
+  onLargerText: () => void;
   camera: CameraPresentation | null;
   /** A sessão posiciona a trilha diretamente (a cada quadro), sem re-renderizar. */
   trackRef: (element: HTMLDivElement | null) => void;
@@ -102,6 +106,9 @@ function PresenterView({
   remainingMs,
   focus,
   textColor,
+  fontScale,
+  onSmallerText,
+  onLargerText,
   camera,
   trackRef,
   onLayout,
@@ -127,7 +134,8 @@ function PresenterView({
   const progress = lines.length > 1 ? lineIndex / (lines.length - 1) : 1;
   const recording = camera !== null && camera.recorder !== "inactive";
 
-  useReportLayout(columnRef, onLayout);
+  // Remede ao mudar o tamanho da letra: a largura da coluna pode não mudar (celular).
+  useReportLayout(columnRef, onLayout, fontScale);
   useWheel(viewportRef, onWheel);
 
   return (
@@ -139,6 +147,7 @@ function PresenterView({
       )}
       data-hidden-controls={controlsHidden || undefined}
       data-text-color={textColor}
+      style={{ "--tp-scale": fontScale } as CSSProperties}
       role="region"
       aria-label="Apresentação do teleprompter"
     >
@@ -174,6 +183,10 @@ function PresenterView({
             ))}
           </div>
         </div>
+
+        {/* Esmaecimento do topo e da base, na largura toda (mais leve que mask-image). */}
+        <div className={styles.fadeTop} aria-hidden />
+        <div className={styles.fadeBottom} aria-hidden />
 
         {phase === "countdown" && (
           <div className={styles.overlay}>
@@ -298,6 +311,8 @@ function PresenterView({
           onFaster={onFaster}
           onSwitchDrive={onSwitchDrive}
           onFlip={camera.onFlip}
+          onSmallerText={onSmallerText}
+          onLargerText={onLargerText}
           onExit={onExit}
         />
       )}
@@ -369,6 +384,25 @@ function PresenterView({
             {lineIndex + 1}/{lines.length}
             {remainingMs !== null && ` · ${formatDuration(remainingMs)}`}
           </span>
+
+          <div className={styles.group}>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={onSmallerText}
+              aria-label="Diminuir a letra ([)"
+            >
+              A−
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={onLargerText}
+              aria-label="Aumentar a letra (])"
+            >
+              A+
+            </Button>
+          </div>
 
           <div className={styles.group}>
             {voiceSupported && (
@@ -482,6 +516,8 @@ function useWheel(
 function useReportLayout(
   ref: RefObject<HTMLElement | null>,
   onLayout: (layout: Layout) => void,
+  /** Muda quando o tamanho da letra muda: força nova medição. */
+  remeasureKey: unknown,
 ) {
   const onLayoutRef = useRef(onLayout);
   useEffect(() => {
@@ -509,5 +545,5 @@ function useReportLayout(
     // Remede quando as webfonts terminarem de carregar.
     document.fonts?.ready.then(report).catch(() => {});
     return () => observer.disconnect();
-  }, [ref]);
+  }, [ref, remeasureKey]);
 }

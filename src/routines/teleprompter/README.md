@@ -125,12 +125,15 @@ O botão funciona como **liga/desliga**: se o roteiro já tem marcações, ele v
 | `V`              | alternar voz ↔ velocidade                       |
 | `G`              | gravar / parar gravação (modo câmera)           |
 | `R`              | reiniciar com contagem                          |
+| `[` / `]`        | diminuir / aumentar a letra                     |
 | `F`              | alternar modo foco                              |
 | `Esc`            | sair (no modo foco, sai primeiro da tela cheia) |
 
 `PageUp`/`PageDown` permitem usar um passador de slides como controle remoto.
 
 ## Dicas
+
+- **Tamanho da letra:** escolha P, M, G ou GG no editor, ou use **A− / A+** durante a leitura (também `[` e `]`). O tamanho fica salvo.
 
 - Posicione a janela/monitor de forma que a **guia** (≈ 30% do topo) fique logo abaixo da câmera.
 - Se se perder, olhe para as linhas esmaecidas acima da guia, ou use `↑`/`↓` ou a roda do mouse. No modo voz, basta continuar lendo de onde você está.

@@ -17,6 +17,8 @@ export type Preferences = {
   holdPauses: boolean;
   countdown: number;
   textColor: BaseTextColor;
+  /** Multiplicador do tamanho da letra na apresentação. */
+  fontScale: number;
   /** Câmera ao fundo, com gravação. */
   camera: boolean;
   dim: DimLevel;
@@ -30,6 +32,7 @@ export const DEFAULT_PREFERENCES: Preferences = {
   holdPauses: false,
   countdown: 3,
   textColor: "white",
+  fontScale: 1.2,
   camera: false,
   dim: "medium",
   facing: "user",
@@ -54,6 +57,9 @@ export function loadPreferences(): Preferences {
       holdPauses: typeof data.holdPauses === "boolean" ? data.holdPauses : d.holdPauses,
       countdown: clampCountdown(data.countdown ?? d.countdown),
       textColor: oneOf(data.textColor, ["white", "yellow", "cyan", "green"], d.textColor),
+      fontScale: clampFontScale(
+        typeof data.fontScale === "number" ? data.fontScale : d.fontScale,
+      ),
       camera: typeof data.camera === "boolean" ? data.camera : d.camera,
       dim: oneOf(data.dim, ["light", "medium", "strong"], d.dim),
       facing: oneOf(data.facing, ["user", "environment"], d.facing),
@@ -69,6 +75,16 @@ export function savePreferences(preferences: Preferences) {
   } catch {
     // armazenamento indisponível (aba privada, cota) — segue sem persistir
   }
+}
+
+export const FONT_SCALE_MIN = 0.8;
+export const FONT_SCALE_MAX = 2.2;
+export const FONT_SCALE_STEP = 0.1;
+
+export function clampFontScale(value: number) {
+  if (!Number.isFinite(value)) return DEFAULT_PREFERENCES.fontScale;
+  const clamped = Math.min(FONT_SCALE_MAX, Math.max(FONT_SCALE_MIN, value));
+  return Math.round(clamped * 100) / 100;
 }
 
 export function clampCountdown(value: number) {

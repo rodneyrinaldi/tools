@@ -63,6 +63,23 @@ const TEXT_COLOR_OPTIONS = [
   { value: "green", label: "Verde" },
 ] as const;
 
+/** Tamanhos prontos; durante a leitura, A− / A+ ajustam em passos de 10%. */
+const FONT_SIZES = { p: 1, m: 1.2, g: 1.45, gg: 1.75 } as const;
+type FontSize = keyof typeof FONT_SIZES;
+
+const FONT_SIZE_OPTIONS = [
+  { value: "p", label: "P" },
+  { value: "m", label: "M" },
+  { value: "g", label: "G" },
+  { value: "gg", label: "GG" },
+] as const satisfies readonly { value: FontSize; label: string }[];
+
+function nearestFontSize(scale: number): FontSize {
+  return (Object.keys(FONT_SIZES) as FontSize[]).reduce((best, size) =>
+    Math.abs(FONT_SIZES[size] - scale) < Math.abs(FONT_SIZES[best] - scale) ? size : best,
+  );
+}
+
 function formatDelta(delta: number) {
   if (delta === 0) return "Nada a sugerir";
   const count = Math.abs(delta);
@@ -337,6 +354,12 @@ export function Editor({
           options={TEXT_COLOR_OPTIONS}
           value={preferences.textColor}
           onChange={(textColor) => onChange({ textColor })}
+        />
+        <SegmentedControl
+          label="Tamanho do texto"
+          options={FONT_SIZE_OPTIONS}
+          value={nearestFontSize(preferences.fontScale)}
+          onChange={(size) => onChange({ fontScale: FONT_SIZES[size] })}
         />
       </div>
 

@@ -6,16 +6,23 @@ import { initialPlayback, playbackReducer } from "./playback";
 import { Presenter } from "./Presenter";
 import { lineDurationMs, lineIndexAt, parseScript, wrapScript } from "./script";
 import {
-  advance,
   clamp,
   currentLineIndex,
   LINE_HEIGHT_EM,
   offsetEm,
   positionToToken,
+  stepSpeed,
+  lineSpans,
+  stepSpring,
   tokenToPosition,
 } from "./scroll";
 import type { DimLevel, Facing, Take } from "./camera";
-import type { BaseTextColor, Drive } from "./storage";
+import {
+  clampFontScale,
+  FONT_SCALE_STEP,
+  type BaseTextColor,
+  type Drive,
+} from "./storage";
 import { useCamera } from "./useCamera";
 import { useRecorder } from "./useRecorder";
 import {
@@ -32,10 +39,6 @@ import {
 const MIN_WPM = 60;
 const MAX_WPM = 300;
 const WPM_STEP = 10;
-/** Constante de tempo da suavização no modo voz: o texto "desliza" até a palavra dita. */
-const VOICE_SMOOTHING_MS = 220;
-/** Velocidade mínima de aproximação no modo voz (linhas por ms). */
-const VOICE_MIN_SPEED = 0.0015;
 const FALLBACK_FONT_PX = 32;
 
 export type CameraOptions = { dim: DimLevel; facing: Facing };
@@ -47,6 +50,9 @@ type SessionProps = {
   holdPauses: boolean;
   countdown: number;
   textColor: BaseTextColor;
+  fontScale: number;
+  /** Tamanho da letra mudou durante a apresentação (para salvar a preferência). */
+  onFontScaleChange: (scale: number) => void;
   /** Câmera ao fundo com gravação; `null` = sem câmera. */
   camera: CameraOptions | null;
   onTake: (take: Take) => void;
@@ -66,6 +72,8 @@ export function Session({
   holdPauses,
   countdown,
   textColor,
+  fontScale: initialFontScale,
+  onFontScaleChange,
   camera: cameraOptions,
   onTake,
   onTakeSaved,
@@ -76,6 +84,7 @@ export function Session({
 }: SessionProps) {
   const [layout, setLayout] = useState<Layout | null>(null);
   const [wordsPerMinute, setWordsPerMinute] = useState(initialWordsPerMinute);
+  const [fontScale, setFontScale] = useState(initialFontScale);
   const [drive, setDrive] = useState<Drive>(() =>
     initialDrive === "voice" && isSpeechRecognitionSupported() ? "voice" : "speed",
   );
@@ -109,28 +118,39 @@ export function Session({
     [lines, wordsPerMinute, holdPauses],
   );
   const words = useMemo(() => buildWordIndex(lines), [lines]);
+  const spans = useMemo(() => lineSpans(lines), [lines]);
   const lineIndex = Math.min(lineIndexAt(lines, lineToken), lines.length - 1);
 
   // Estado do laço de animação: muda a cada quadro, por isso fica em refs.
   // cursor/pending: acompanhamento da voz (ver trackSpoken).
+  // velocity: linhas/ms; `null` = recomeçar na velocidade natural (após pausa/salto).
   const engine = useRef({
     position: 0,
     target: 0,
     token: 0,
     cursor: 0,
     pending: null as number | null,
+    velocity: null as number | null,
   });
   const trackRef = useRef<HTMLDivElement | null>(null);
-  const latest = useRef({ lines, durations, words });
+  const fontPx = layout?.fontSize ?? null;
+  const latest = useRef({ lines, durations, words, spans, fontPx });
   useEffect(() => {
-    latest.current = { lines, durations, words };
+    latest.current = { lines, durations, words, spans, fontPx };
   });
 
   const paint = useCallback(() => {
     const track = trackRef.current;
     if (!track) return;
-    const em = offsetEm(latest.current.lines, engine.current.position);
-    track.style.transform = `translate3d(0, ${-em}em, 0)`;
+    const { lines, fontPx } = latest.current;
+    // Meia linha de atraso: cada linha cruza o centro da guia no meio do seu tempo de
+    // leitura — a linha atual (floor da posição) fica sempre sobre a faixa-guia.
+    const em = offsetEm(lines, engine.current.position - 0.5);
+    // A trilha é uma camada própria (will-change): mover com posições fracionárias é o que
+    // deixa o movimento liso; arredondar para pixels criaria degraus irregulares.
+    track.style.transform = fontPx
+      ? `translate3d(0, ${-(em * fontPx).toFixed(2)}px, 0)`
+      : `translate3d(0, ${-em}em, 0)`;
   }, []);
 
   const commit = useCallback(
@@ -181,25 +201,20 @@ export function Session({
     if (playback.phase !== "running") return;
     let frame = 0;
     let last: number | null = null;
+    engine.current.velocity = null;
 
     const step = (now: number) => {
       const elapsed = last === null ? 0 : Math.min(now - last, 100);
       last = now;
-      const { lines, durations, words } = latest.current;
+      const { lines, durations, words, spans } = latest.current;
       const e = engine.current;
 
-      let next: number;
-      if (drive === "speed") {
-        next = advance(e.position, elapsed, durations);
-      } else {
-        // Aproximação suave, com velocidade mínima para chegar ao alvo em tempo finito.
-        const distance = e.target - e.position;
-        const step = Math.max(
-          Math.abs(distance) * (1 - Math.exp(-elapsed / VOICE_SMOOTHING_MS)),
-          VOICE_MIN_SPEED * elapsed,
-        );
-        next = e.position + Math.sign(distance) * Math.min(step, Math.abs(distance));
-      }
+      const motion =
+        drive === "speed"
+          ? stepSpeed(e.position, e.velocity, elapsed, durations, spans)
+          : stepSpring(e.position, e.velocity ?? 0, e.target, elapsed);
+      e.velocity = motion.velocity;
+      const next = motion.position;
       commit(next);
 
       const ended =
@@ -246,6 +261,7 @@ export function Session({
       e.target = position;
       e.cursor = cursorForPosition(words, position);
       e.pending = null;
+      e.velocity = null;
       commit(position);
       forgetHeard();
       dispatch({ type: "moved" });
@@ -257,6 +273,7 @@ export function Session({
     engine.current.target = 0;
     engine.current.cursor = 0;
     engine.current.pending = null;
+    engine.current.velocity = null;
     commit(0);
     forgetHeard();
     dispatch({ type: "restart", countdown });
@@ -292,7 +309,13 @@ export function Session({
     fullscreenOnGesture();
     setLastTake(null);
     if (playback.phase === "finished") {
-      engine.current = { ...engine.current, target: 0, cursor: 0, pending: null };
+      engine.current = {
+        ...engine.current,
+        target: 0,
+        cursor: 0,
+        pending: null,
+        velocity: null,
+      };
       commit(0);
       forgetHeard();
     }
@@ -313,6 +336,13 @@ export function Session({
     onExit();
   }
 
+  function changeFontScale(delta: number) {
+    const next = clampFontScale(fontScale + delta);
+    if (next === fontScale) return;
+    setFontScale(next);
+    onFontScaleChange(next);
+  }
+
   function changeSpeed(delta: number) {
     if (drive !== "speed") return;
     setWordsPerMinute((wpm) => clamp(wpm + delta, MIN_WPM, MAX_WPM));
@@ -323,6 +353,7 @@ export function Session({
     e.target = e.position;
     e.cursor = cursorForPosition(latest.current.words, e.position);
     e.pending = null;
+    e.velocity = null;
     forgetHeard();
     setDrive((current) =>
       current === "voice" || !isSpeechRecognitionSupported() ? "speed" : "voice",
@@ -371,6 +402,8 @@ export function Session({
         PageDown: () => moveBy(1, true),
         ArrowUp: () => moveBy(-1, true),
         PageUp: () => moveBy(-1, true),
+        "[": () => changeFontScale(-FONT_SCALE_STEP),
+        "]": () => changeFontScale(FONT_SCALE_STEP),
         "+": () => changeSpeed(WPM_STEP),
         "=": () => changeSpeed(WPM_STEP),
         "-": () => changeSpeed(-WPM_STEP),
@@ -409,6 +442,9 @@ export function Session({
       // O modo câmera sempre cobre a tela inteira, com ou sem a tela cheia do navegador.
       focus={focus || Boolean(cameraOptions)}
       textColor={textColor}
+      fontScale={fontScale}
+      onSmallerText={() => changeFontScale(-FONT_SCALE_STEP)}
+      onLargerText={() => changeFontScale(FONT_SCALE_STEP)}
       camera={
         cameraOptions && {
           stream: camera.stream,

@@ -70,7 +70,8 @@ Regras de inserção:
 5. **Rolagem contínua e suave**, sem saltos.
    - **Modo voz:** o microfone ouve a leitura; as palavras reconhecidas são alinhadas ao roteiro (tolerando acentos, erros do reconhecedor e palavras puladas) e o texto desliza até a palavra dita. Pausas na fala param o texto; repetir um trecho anterior faz o texto voltar.
    - **Proteção contra vai e volta:** o texto só volta com frase **finalizada** pelo reconhecedor, recuo de ≥ 4 palavras e ≥ 3 palavras significativas casadas — correções de hipóteses provisórias nunca fazem o texto voltar. Saltos para frente de mais de 3 palavras precisam se repetir na transcrição seguinte. Remedir o texto (fonte, redimensionar) não altera o ponto da voz.
-   - **Modo velocidade:** cada linha leva `palavras ÷ ppm` para passar pela guia (+ pausas, se "Seguram o texto").
+   - **Modo velocidade:** a velocidade é a média de uma janela de linhas (a anterior e as 3 seguintes, cada uma valendo `palavras ÷ ppm` + pausas, se "Seguram o texto") e muda gradualmente (~0,6 s): a rolagem fica praticamente constante, sem pulsar entre linhas curtas e longas, e com a mesma velocidade na tela também entre parágrafos.
+   - **Movimento:** no modo voz, o texto vai até a palavra dita com uma mola amortecida (acelera e freia suave, sem ultrapassar nem recuar). Cada linha cruza o centro da guia no meio do seu tempo de leitura, então a linha destacada está sempre sobre a faixa. O esmaecimento do topo/base é um degradê por cima (sem `mask-image`) e a trilha é uma camada própria (`will-change`), para não tremer.
 6. **Reposicionar a qualquer momento** com `↑`/`↓` (uma linha), roda do mouse/trackpad (fino) ou passador de slides. No modo voz, a escuta recomeça a partir do novo ponto, descartando o que já foi ouvido.
 7. Indicador do microfone (ligando, ouvindo, bloqueado, ocupado, falha). Microfone bloqueado, ocupado (`audio-capture`) ou falha mostram um aviso com **Usar velocidade**.
    - Com a câmera ligada, o reconhecimento recebe uma cópia da faixa de áudio da câmera (`start(audioTrack)`, onde o navegador suporta), para não disputar o microfone com a gravação.
@@ -92,6 +93,7 @@ Regras de inserção:
 | `+` / `−`        | velocidade ±10 ppm (modo velocidade)            |
 | `V`              | alternar voz ↔ velocidade                       |
 | `R`              | reiniciar com contagem                          |
+| `[` / `]`        | diminuir / aumentar a letra                     |
 | `F`              | alternar modo foco                              |
 | `Esc`            | sair (no modo foco, sai primeiro da tela cheia) |
 
@@ -145,6 +147,8 @@ Etiquetas entre chaves formatam trechos do roteiro: `{amarelo}texto{/}`, `{grand
 - [x] Reiniciar, sair, alternar voz/velocidade e ajustar velocidade por botão e teclado.
 - [x] Modo foco em tela cheia, sem nenhum elemento além do texto e controles autoocultáveis.
 - [x] Mudar de visualização (ou redimensionar) mantém a posição de leitura.
+- [x] Tamanho da letra: P/M/G/GG no editor (padrão M = 1,2×) e A−/A+ (`[` `]`) durante a leitura, em passos de 10%, salvo nas preferências; o texto é requebrado sem perder a posição.
+- [x] Rolagem sem solavancos: velocidade estável entre linhas e parágrafos; modo voz sem arranca-e-para.
 - [x] ✨ Auto insere marcações conforme as regras, na seleção ou no roteiro todo, sem duplicar (idempotente).
 - [x] Com marcações no roteiro, o mesmo botão remove todas (alternador), preservando notas e espaçamento.
 - [x] Desfazer restaura o texto anterior ao Auto ou à remoção.
@@ -175,7 +179,7 @@ Etiquetas entre chaves formatam trechos do roteiro: `{amarelo}texto{/}`, `{grand
 - Reconhecimento de fala local/offline.
 - Gravar o texto sobreposto no vídeo.
 - Espelhamento horizontal (vidro de teleprompter físico).
-- Ajuste do tamanho da fonte e da largura da coluna.
+- Ajuste da largura da coluna.
 - Controle remoto pelo celular.
 - Guardar gravações entre sessões (ficam só na memória até fechar a página).
 

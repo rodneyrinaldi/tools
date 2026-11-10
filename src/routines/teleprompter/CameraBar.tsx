@@ -34,6 +34,8 @@ export type CameraBarProps = {
   onFaster: () => void;
   onSwitchDrive: () => void;
   onFlip: () => void;
+  onSmallerText: () => void;
+  onLargerText: () => void;
   onExit: () => void;
 };
 
@@ -97,6 +99,22 @@ export function CameraBar(props: CameraBarProps) {
             {drive === "voice" ? "⏩ Velocidade" : "🎙 Voz"}
           </Button>
         )}
+        <Button
+          size="sm"
+          variant="ghost"
+          onClick={props.onSmallerText}
+          aria-label="Diminuir a letra"
+        >
+          A−
+        </Button>
+        <Button
+          size="sm"
+          variant="ghost"
+          onClick={props.onLargerText}
+          aria-label="Aumentar a letra"
+        >
+          A+
+        </Button>
         {props.canFlip && !recording && (
           <Button
             size="sm"

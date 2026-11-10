@@ -17,8 +17,9 @@
   border-radius: var(--ds-radius-md);
 }
 
+/* --tp-scale: tamanho escolhido pela pessoa (A− / A+), aplicado sobre o tamanho responsivo. */
 .embedded .viewport {
-  font-size: clamp(1.4rem, 2.6vw, 2.2rem);
+  font-size: calc(clamp(1.4rem, 2.6vw, 2.2rem) * var(--tp-scale, 1));
 }
 
 .focus {
@@ -30,7 +31,7 @@
 
 .focus .viewport {
   --tp-guide: 26%;
-  font-size: clamp(2rem, 4.8vw, 4.6rem);
+  font-size: calc(clamp(2rem, 4.8vw, 4.6rem) * var(--tp-scale, 1));
 }
 
 .viewport {
@@ -41,30 +42,60 @@
 }
 
 .column {
+  /* Folga lateral para a seta da guia (enxuta: no celular cada pixel de largura conta). */
+  --tp-gutter: 1.1em;
+
   position: absolute;
   inset: 0;
-  /* 20em de texto + 1.5em de folga em cada lado para a seta da guia. */
-  width: min(100% - 2 * var(--ds-space-3), 23em);
-  padding-inline: 1.5em;
+  width: min(100% - 2 * var(--ds-space-2), 20em + 2 * var(--tp-gutter));
+  padding-inline: var(--tp-gutter);
   margin-inline: auto;
-  /* O texto lido some aos poucos no topo; o que vem depois se dissolve embaixo. */
-  mask-image: linear-gradient(
-    to bottom,
-    transparent 0,
-    #000 calc(var(--tp-guide) - 4em),
-    #000 82%,
-    transparent 100%
-  );
+  /* Corta o texto na própria coluna (no modo câmera, ela termina antes dos botões). */
+  overflow: hidden;
   font-weight: 500;
   letter-spacing: -0.005em;
+}
+
+/*
+ * Esmaecimento do topo (texto já lido sumindo aos poucos) e da base: degradês por cima,
+ * em vez de mask-image na coluna, que força recomposição a cada quadro e pesa no celular.
+ */
+.fadeTop,
+.fadeBottom {
+  position: absolute;
+  inset-inline: 0;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.fadeTop {
+  top: 0;
+  height: max(0px, calc(var(--tp-guide) - 3.2em));
+  background: linear-gradient(to bottom, rgb(0 0 0 / 0.92), rgb(0 0 0 / 0));
+}
+
+.fadeBottom {
+  bottom: 0;
+  height: 16%;
+  background: linear-gradient(to top, rgb(0 0 0 / 0.85), rgb(0 0 0 / 0));
+}
+
+/* Modo câmera: a coluna termina 168px acima (botões); a guia fica a 26% da coluna. */
+.withCamera .fadeTop {
+  height: max(0px, calc((100% - 168px) * 0.26 - 3.2em));
+}
+
+.withCamera .fadeBottom {
+  bottom: 168px;
+  height: 12%;
 }
 
 /* Linha-guia: faixa sutil + seta na lateral, na altura onde se lê. */
 .guide {
   position: absolute;
   top: var(--tp-guide);
-  left: 0.9em;
-  right: 0.9em;
+  left: calc(var(--tp-gutter) - 0.4em);
+  right: calc(var(--tp-gutter) - 0.4em);
   height: var(--tp-line-height);
   margin-top: calc(var(--tp-line-height) / -2);
   border-radius: var(--ds-radius-sm);
@@ -80,7 +111,7 @@
 
 .guideArrow {
   position: absolute;
-  left: -0.9em;
+  left: -0.6em;
   top: 50%;
   transform: translateY(-50%);
   font-size: 0.6em;
@@ -90,9 +121,10 @@
 
 .track {
   position: absolute;
-  inset: var(--tp-guide) 1.5em auto;
+  inset: var(--tp-guide) var(--tp-gutter) auto;
   margin-top: calc(var(--tp-line-height) / -2);
   will-change: transform;
+  backface-visibility: hidden;
 }
 
 /* Cor base do texto lido (preferência); {cores} do roteiro têm prioridade. */

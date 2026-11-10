@@ -116,6 +116,10 @@ export default function Teleprompter() {
         holdPauses={preferences.holdPauses}
         countdown={preferences.countdown}
         textColor={preferences.textColor}
+        fontScale={preferences.fontScale}
+        onFontScaleChange={(fontScale) =>
+          setPreferences((previous) => ({ ...previous, fontScale }))
+        }
         camera={
           preferences.camera ? { dim: preferences.dim, facing: preferences.facing } : null
         }

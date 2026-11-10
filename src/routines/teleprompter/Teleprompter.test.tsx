@@ -224,10 +224,11 @@ describe("<Teleprompter /> — apresentação por velocidade", () => {
     advance(2000);
     expect(currentLine()).toBe("Primeira linha do roteiro.");
 
-    advance(1800);
+    // A 1ª linha também percorre o espaço até o próximo parágrafo (pausa natural).
+    advance(2700);
     expect(currentLine()).toBe("Segundo parágrafo aqui.");
 
-    advance(1500);
+    advance(1800);
     expect(screen.getByText("Fim")).toBeInTheDocument();
   });
 
