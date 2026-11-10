@@ -24,6 +24,18 @@
   --ds-color-warning: #fbbf24;
   --ds-color-danger: #f87171;
 
+  /* Paleta para conteúdo do usuário (ex.: cores do roteiro). Vivas para ler sobre fundo escuro. */
+  --ds-palette-yellow: #fde047;
+  --ds-palette-red: #f87171;
+  --ds-palette-green: #4ade80;
+  --ds-palette-blue: #60a5fa;
+  --ds-palette-cyan: #22d3ee;
+  --ds-palette-pink: #f472b6;
+  --ds-palette-orange: #fb923c;
+  --ds-palette-purple: #c084fc;
+  --ds-palette-white: #ffffff;
+  --ds-palette-gray: #a1a1aa;
+
   /* Glass */
   --ds-glass-bg: rgb(255 255 255 / 0.045);
   --ds-glass-bg-hover: rgb(255 255 255 / 0.075);
@@ -41,6 +53,7 @@
   --ds-font-sans:
     var(--font-geist-sans), system-ui, -apple-system, "Segoe UI", sans-serif;
   --ds-font-mono: var(--font-geist-mono), ui-monospace, "Cascadia Code", monospace;
+  --ds-font-serif: Georgia, "Times New Roman", serif;
   --ds-text-xs: 0.75rem;
   --ds-text-sm: 0.875rem;
   --ds-text-md: 1rem;

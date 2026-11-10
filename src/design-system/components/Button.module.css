@@ -37,6 +37,23 @@
   font-size: var(--ds-text-sm);
 }
 
+.lg {
+  height: 56px;
+  min-width: 56px;
+  padding: 0 var(--ds-space-5);
+  font-size: var(--ds-text-md);
+}
+
+.danger {
+  background: linear-gradient(135deg, #ef4444, var(--ds-color-danger));
+  color: #fff;
+  box-shadow: 0 8px 24px -10px rgb(239 68 68 / 0.75);
+}
+
+.danger:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
+
 .primary {
   background: linear-gradient(
     135deg,

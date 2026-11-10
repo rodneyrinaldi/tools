@@ -42,3 +42,6 @@ next-env.d.ts
 
 # claude code (configs pessoais)
 .claude/settings.local.json
+
+# certificados gerados por next dev --experimental-https
+/certificates

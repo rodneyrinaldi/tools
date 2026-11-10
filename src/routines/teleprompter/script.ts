@@ -3,8 +3,10 @@
  * de largura fixa e calcula quanto tempo cada linha fica no topo.
  */
 
+import { combineStyles, parseStyleTag, styleWidthFactor, type TextStyle } from "./format";
+
 export type Token =
-  | { kind: "word"; text: string; emphasis: boolean; glue: boolean }
+  | { kind: "word"; text: string; emphasis: boolean; glue: boolean; style?: TextStyle }
   | { kind: "cue"; text: string; glue: boolean }
   | { kind: "pause"; seconds: number; breath: boolean; glue: boolean };
 
@@ -33,7 +35,12 @@ export const BREATH_SECONDS = 1;
 /** Tempo mínimo de uma linha com texto, para não "piscar" em linhas muito curtas. */
 export const MIN_LINE_MS = 700;
 
-const TOKEN_PATTERN = /\[([^\]\n]*)\]|\*([^*\n]+)\*|\S+/g;
+/**
+ * {formatação} | [marcação] | *ênfase* | palavra (para antes de { [ *) | caractere solto.
+ * Palavras não engolem etiquetas coladas: "fim{/}," vira "fim", "{/}", ",".
+ */
+const TOKEN_PATTERN = /\{([^}\n]*)\}|\[([^\]\n]*)\]|\*([^*\n]+)\*|[^\s{[*]+|\S/g;
+const ANY_STYLE_TAG = /\{[^}\n]*\}/g;
 const PAUSE_PATTERN = /^pausa(?:\s+(\d+(?:[.,]\d+)?)\s*s?)?$/i;
 const BREATH_PATTERN = /^respira$/i;
 
@@ -51,12 +58,31 @@ export function parseScript(source: string): Paragraph[] {
 
 function parseParagraph(text: string): Paragraph {
   const tokens: Token[] = [];
+  const styles: TextStyle[] = [];
+  /** Fim do último token visível (etiquetas de formatação não contam). */
   let previousEnd = -1;
 
   for (const match of text.matchAll(TOKEN_PATTERN)) {
-    const glue = match.index === previousEnd;
-    previousEnd = match.index + match[0].length;
-    const [raw, bracket, emphasis] = match;
+    const [raw, styleTag, bracket, emphasis] = match;
+
+    if (styleTag !== undefined) {
+      const parsed = parseStyleTag(styleTag);
+      if (parsed === "close") {
+        styles.pop();
+        continue;
+      }
+      if (parsed) {
+        styles.push(parsed);
+        continue;
+      }
+      // Chaves com palavras desconhecidas seguem como texto normal.
+    }
+
+    // Colado ao anterior se entre eles só houver etiquetas de formatação (sem espaço).
+    const between = previousEnd >= 0 ? text.slice(previousEnd, match.index) : " ";
+    const glue = between.replace(ANY_STYLE_TAG, "") === "";
+    previousEnd = match.index + raw.length;
+    const style = combineStyles(styles);
 
     if (bracket !== undefined) {
       const content = bracket.trim();
@@ -81,10 +107,17 @@ function parseParagraph(text: string): Paragraph {
             text: word,
             emphasis: true,
             glue: glue && i === 0,
+            ...(style && { style }),
           }),
         );
     } else {
-      tokens.push({ kind: "word", text: raw, emphasis: false, glue });
+      tokens.push({
+        kind: "word",
+        text: raw,
+        emphasis: false,
+        glue,
+        ...(style && { style }),
+      });
     }
   }
 
@@ -108,7 +141,14 @@ function formatSeconds(seconds: number) {
 
 /** Largura de um token; etiquetas e indicações usam fonte menor + respiro lateral. */
 export function tokenWidth(token: Token, measure: Measurer): number {
-  if (token.kind === "word") return measure.text(token.text);
+  if (token.kind === "word") {
+    // Mono não é a fonte medida: estima ~0,6em por caractere.
+    const base =
+      token.style?.font === "mono"
+        ? token.text.length * 0.6 * measure.em
+        : measure.text(token.text);
+    return base * styleWidthFactor(token.style);
+  }
   return measure.text(tokenLabel(token)) * 0.6 + measure.em * 0.8;
 }
 

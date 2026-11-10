@@ -26,13 +26,59 @@ function renderWith(
   {
     countdown = 0,
     drive = "voice",
-  }: { countdown?: number; drive?: "voice" | "speed" } = {},
+    ...extra
+  }: { countdown?: number; drive?: "voice" | "speed"; [key: string]: unknown } = {},
 ) {
   localStorage.setItem(
     "tools:teleprompter",
-    JSON.stringify({ text, speed: "normal", countdown, drive }),
+    JSON.stringify({ text, speed: "normal", countdown, drive, ...extra }),
   );
   return render(<Teleprompter />);
+}
+
+/** MediaRecorder simulado: entrega um pedaço de vídeo ao parar. */
+class FakeMediaRecorder {
+  static last: FakeMediaRecorder | null = null;
+  static isTypeSupported = (type: string) => type === "video/webm";
+  state: "inactive" | "recording" | "paused" = "inactive";
+  mimeType = "video/webm";
+  ondataavailable: ((event: { data: Blob }) => void) | null = null;
+  onstop: (() => void) | null = null;
+  constructor() {
+    FakeMediaRecorder.last = this;
+  }
+  start() {
+    this.state = "recording";
+  }
+  pause() {
+    this.state = "paused";
+  }
+  resume() {
+    this.state = "recording";
+  }
+  stop() {
+    this.state = "inactive";
+    this.ondataavailable?.({ data: new Blob(["video"], { type: "video/webm" }) });
+    this.onstop?.();
+  }
+}
+
+function installCamera() {
+  const stopTrack = vi.fn();
+  const stream = { getTracks: () => [{ stop: stopTrack }] } as unknown as MediaStream;
+  Object.defineProperty(navigator, "mediaDevices", {
+    configurable: true,
+    value: {
+      getUserMedia: vi.fn().mockResolvedValue(stream),
+      enumerateDevices: vi
+        .fn()
+        .mockResolvedValue([{ kind: "videoinput" }, { kind: "videoinput" }]),
+    },
+  });
+  vi.stubGlobal("MediaRecorder", FakeMediaRecorder);
+  URL.createObjectURL = vi.fn(() => "blob:take");
+  URL.revokeObjectURL = vi.fn();
+  return { stopTrack };
 }
 
 /** Relógio falso incluindo requestAnimationFrame (o laço de rolagem). */
@@ -276,5 +322,105 @@ describe("<Teleprompter /> — seguir a voz", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Usar velocidade" }));
     expect(screen.getByText("140 ppm")).toBeInTheDocument();
+  });
+});
+
+describe("<Teleprompter /> — câmera e gravação", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    Reflect.deleteProperty(navigator, "mediaDevices");
+  });
+
+  it("mostra a câmera ao fundo e espera Gravar ou Ensaiar", async () => {
+    installCamera();
+    renderWith(SCRIPT, { drive: "speed", camera: true, dim: "strong" });
+    fireEvent.click(screen.getByRole("button", { name: "🎥 Abrir câmera" }));
+    await act(async () => {});
+
+    expect(navigator.mediaDevices.getUserMedia).toHaveBeenCalledWith(
+      expect.objectContaining({ video: expect.objectContaining({ facingMode: "user" }) }),
+    );
+    expect(document.querySelector("video")).toBeInTheDocument();
+    // Parado na primeira linha, sem gravar.
+    expect(currentLine()).toBe("Primeira linha do roteiro.");
+    expect(screen.getByRole("button", { name: "▶ Ensaiar" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Trocar de câmera" })).toBeInTheDocument();
+  });
+
+  it("grava, pausa junto com o texto, para e guarda a gravação", async () => {
+    installCamera();
+    renderWith(SCRIPT, { drive: "speed", camera: true });
+    fireEvent.click(screen.getByRole("button", { name: "🎥 Abrir câmera" }));
+    await act(async () => {});
+
+    fireEvent.click(screen.getByRole("button", { name: "Gravar" }));
+    expect(FakeMediaRecorder.last?.state).toBe("recording");
+    expect(screen.getByRole("status", { name: "" })).toHaveTextContent(/REC 00:0\d/);
+
+    fireEvent.click(screen.getByRole("button", { name: "Pausar gravação" }));
+    expect(FakeMediaRecorder.last?.state).toBe("paused");
+    expect(screen.getByText(/PAUSADO/)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Continuar gravação" }));
+    expect(FakeMediaRecorder.last?.state).toBe("recording");
+
+    fireEvent.click(screen.getByRole("button", { name: "⏹ Parar" }));
+    expect(
+      await screen.findByRole("dialog", { name: "Gravação concluída" }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Baixar" })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Voltar à câmera" }));
+    fireEvent.click(screen.getByRole("button", { name: "Sair" }));
+
+    // A gravação continua disponível no editor.
+    expect(await screen.findByText("Gravações (1)")).toBeInTheDocument();
+    expect(screen.getByText("Não salva")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Baixar" }));
+    expect(screen.getByText("Salva")).toBeInTheDocument();
+  });
+
+  it("sair gravando encerra e guarda a gravação", async () => {
+    installCamera();
+    renderWith(SCRIPT, { drive: "speed", camera: true });
+    fireEvent.click(screen.getByRole("button", { name: "🎥 Abrir câmera" }));
+    await act(async () => {});
+    fireEvent.click(screen.getByRole("button", { name: "Gravar" }));
+
+    fireEvent.click(screen.getByRole("button", { name: "Sair" }));
+    expect(await screen.findByText("Gravações (1)")).toBeInTheDocument();
+  });
+
+  it("sem acesso à câmera, avisa e mantém o ensaio do texto", async () => {
+    Object.defineProperty(navigator, "mediaDevices", {
+      configurable: true,
+      value: {
+        getUserMedia: vi
+          .fn()
+          .mockRejectedValue(Object.assign(new Error("x"), { name: "NotAllowedError" })),
+        enumerateDevices: vi.fn().mockResolvedValue([]),
+      },
+    });
+    renderWith(SCRIPT, { drive: "speed", camera: true });
+    fireEvent.click(screen.getByRole("button", { name: "🎥 Abrir câmera" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(/negado/);
+    expect(screen.getByRole("button", { name: "Gravar" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "▶ Ensaiar" })).toBeEnabled();
+  });
+});
+
+describe("<Teleprompter /> — formatação", () => {
+  it("botões de formatação envolvem a seleção e a prévia mostra o resultado", () => {
+    renderWith("Olá mundo");
+    const textarea = screen.getByLabelText("Roteiro") as HTMLTextAreaElement;
+    textarea.setSelectionRange(4, 9);
+
+    fireEvent.click(screen.getByRole("button", { name: "Cor amarelo" }));
+    expect(textarea).toHaveValue("Olá {amarelo}mundo{/}");
+
+    fireEvent.click(screen.getByRole("button", { name: "Prévia" }));
+    const styled = screen.getByText("mundo");
+    expect(styled.className).toMatch(/color-yellow/);
   });
 });

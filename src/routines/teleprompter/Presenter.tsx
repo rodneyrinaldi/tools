@@ -3,12 +3,36 @@
 import { useEffect, useRef, useState, type RefObject } from "react";
 import { createPortal } from "react-dom";
 import { Button, cx } from "@/design-system";
+import { DIM_OPACITY, type DimLevel, type RecorderState, type Take } from "./camera";
+import { CameraBar, RecIndicator } from "./CameraBar";
 import type { Layout } from "./measure";
 import type { Phase } from "./playback";
-import { formatDuration, tokenLabel, type Line, type Token } from "./script";
-import type { Drive } from "./storage";
+import { formatDuration, type Line } from "./script";
+import type { BaseTextColor, Drive } from "./storage";
+import { TakeActions } from "./Takes";
+import { TokenView } from "./TokenView";
 import type { SpeechStatus } from "./useSpeechRecognition";
 import styles from "./Presenter.module.css";
+
+/** Câmera ao fundo + gravação (modo câmera). */
+export type CameraPresentation = {
+  stream: MediaStream | null;
+  error: string | null;
+  /** Câmera frontal aparece espelhada (como um espelho); a gravação sai normal. */
+  mirrored: boolean;
+  dim: DimLevel;
+  recorder: RecorderState;
+  canRecord: boolean;
+  canFlip: boolean;
+  elapsedMs: number;
+  /** Última gravação concluída: mostra a prévia com baixar/compartilhar. */
+  lastTake: Take | null;
+  onRecord: () => void;
+  onStop: () => void;
+  onFlip: () => void;
+  onTakeSaved: (id: string) => void;
+  onCloseTake: () => void;
+};
 
 const IDLE_MS = 2500;
 
@@ -23,6 +47,8 @@ export type PresenterProps = {
   wordsPerMinute: number;
   remainingMs: number | null;
   focus: boolean;
+  textColor: BaseTextColor;
+  camera: CameraPresentation | null;
   /** A sessão posiciona a trilha diretamente (a cada quadro), sem re-renderizar. */
   trackRef: (element: HTMLDivElement | null) => void;
   onLayout: (layout: Layout) => void;
@@ -62,6 +88,8 @@ function PresenterView({
   wordsPerMinute,
   remainingMs,
   focus,
+  textColor,
+  camera,
   trackRef,
   onLayout,
   onWheel,
@@ -77,22 +105,33 @@ function PresenterView({
 }: PresenterProps) {
   const columnRef = useRef<HTMLDivElement>(null);
   const viewportRef = useRef<HTMLDivElement>(null);
-  const idle = useIdle(focus);
+  const idle = useIdle(focus && !camera);
   const voiceProblem =
     drive === "voice" && (voiceStatus === "denied" || voiceStatus === "error");
-  const controlsHidden = focus && idle && phase === "running" && !voiceProblem;
+  const controlsHidden = focus && !camera && idle && phase === "running" && !voiceProblem;
   const progress = lines.length > 1 ? lineIndex / (lines.length - 1) : 1;
+  const recording = camera !== null && camera.recorder !== "inactive";
 
   useReportLayout(columnRef, onLayout);
   useWheel(viewportRef, onWheel);
 
   return (
     <div
-      className={cx(styles.root, focus ? styles.focus : styles.embedded)}
+      className={cx(
+        styles.root,
+        focus ? styles.focus : styles.embedded,
+        camera && styles.withCamera,
+      )}
       data-hidden-controls={controlsHidden || undefined}
+      data-text-color={textColor}
       role="region"
       aria-label="Apresentação do teleprompter"
     >
+      {camera && (
+        <CameraLayer stream={camera.stream} mirrored={camera.mirrored} dim={camera.dim} />
+      )}
+      {camera && <RecIndicator recorder={camera.recorder} elapsedMs={camera.elapsedMs} />}
+
       <div ref={viewportRef} className={styles.viewport}>
         <div ref={columnRef} className={styles.column}>
           <div className={styles.guide} aria-hidden>
@@ -134,15 +173,55 @@ function PresenterView({
           </div>
         )}
 
-        {phase === "finished" && (
-          <div className={styles.overlay}>
+        {phase === "finished" && !camera?.lastTake && (
+          <div className={cx(styles.overlay, recording && styles.overlaySoft)}>
             <span className={styles.end}>Fim</span>
             <div className={styles.overlayActions}>
-              <Button variant="primary" onClick={onRestart}>
-                Reiniciar
-              </Button>
-              <Button variant="secondary" onClick={onExit}>
-                Voltar ao editor
+              {recording ? (
+                <Button size="lg" variant="danger" onClick={camera?.onStop}>
+                  ⏹ Parar gravação
+                </Button>
+              ) : (
+                <>
+                  <Button variant="primary" onClick={onRestart}>
+                    Reiniciar
+                  </Button>
+                  <Button variant="secondary" onClick={onExit}>
+                    Voltar ao editor
+                  </Button>
+                </>
+              )}
+            </div>
+          </div>
+        )}
+
+        {camera?.error && (
+          <div className={styles.alert} role="alert">
+            {camera.error} Sem câmera, o texto continua funcionando (▶ Ensaiar).
+          </div>
+        )}
+
+        {camera?.lastTake && (
+          <div className={styles.overlay}>
+            <div
+              className={styles.takeSheet}
+              role="dialog"
+              aria-label="Gravação concluída"
+            >
+              <span className={styles.takeTitle}>Gravação concluída</span>
+              <video
+                className={styles.takeVideo}
+                src={camera.lastTake.url}
+                controls
+                playsInline
+              />
+              <TakeActions
+                take={camera.lastTake}
+                onSaved={camera.onTakeSaved}
+                size="lg"
+              />
+              <Button variant="ghost" onClick={camera.onCloseTake}>
+                Voltar à câmera
               </Button>
             </div>
           </div>
@@ -164,7 +243,34 @@ function PresenterView({
         <span style={{ transform: `scaleX(${progress})` }} />
       </div>
 
-      <div className={styles.controls} aria-hidden={controlsHidden || undefined}>
+      {camera && (
+        <CameraBar
+          phase={phase}
+          recorder={camera.recorder}
+          canRecord={camera.canRecord}
+          canFlip={camera.canFlip}
+          drive={drive}
+          voiceStatus={voiceStatus}
+          voiceSupported={voiceSupported}
+          wordsPerMinute={wordsPerMinute}
+          onRecord={camera.onRecord}
+          onStop={camera.onStop}
+          onToggle={onToggle}
+          onPrevious={onPrevious}
+          onNext={onNext}
+          onSlower={onSlower}
+          onFaster={onFaster}
+          onSwitchDrive={onSwitchDrive}
+          onFlip={camera.onFlip}
+          onExit={onExit}
+        />
+      )}
+
+      <div
+        className={styles.controls}
+        hidden={Boolean(camera)}
+        aria-hidden={controlsHidden || undefined}
+      >
         <div className={styles.group}>
           <Button
             size="sm"
@@ -252,32 +358,42 @@ function PresenterView({
   );
 }
 
-function TokenView({ token, first }: { token: Token; first: boolean }) {
-  const space = first || token.glue ? "" : " ";
-  if (token.kind === "word") {
-    return (
-      <>
-        {space}
-        {token.emphasis ? (
-          <strong className={styles.emphasis}>{token.text}</strong>
-        ) : (
-          token.text
-        )}
-      </>
-    );
-  }
+/** Vídeo da câmera ao fundo, sob uma camada escura que deixa o texto legível. */
+function CameraLayer({
+  stream,
+  mirrored,
+  dim,
+}: {
+  stream: MediaStream | null;
+  mirrored: boolean;
+  dim: DimLevel;
+}) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+    video.srcObject = stream;
+    if (!stream) return;
+    try {
+      // Autoplay bloqueado não é erro: o vídeo começa ao primeiro toque.
+      void video.play()?.catch(() => {});
+    } catch {
+      // ambiente sem suporte a mídia
+    }
+  }, [stream]);
+
   return (
-    <>
-      {space}
-      <span
-        className={cx(
-          styles.marker,
-          token.kind === "cue" ? styles.cue : token.breath ? styles.breath : styles.pause,
-        )}
-      >
-        {tokenLabel(token)}
-      </span>
-    </>
+    <div className={styles.cameraLayer} aria-hidden>
+      <video
+        ref={videoRef}
+        className={cx(styles.cameraVideo, mirrored && styles.mirrored)}
+        autoPlay
+        muted
+        playsInline
+      />
+      <div className={styles.cameraDim} style={{ opacity: DIM_OPACITY[dim] }} />
+    </div>
   );
 }
 

@@ -1,6 +1,6 @@
 # 🎬 Teleprompter
 
-Leia seu roteiro olhando para a câmera. O texto rola de forma contínua: a linha que você está lendo fica numa guia perto do topo da tela, com o que já foi lido logo acima e o que vem depois logo abaixo. Quem dita o ritmo é você: o texto **segue a sua voz** ou anda numa **velocidade** que você ajusta ao vivo.
+Leia seu roteiro olhando para a câmera. O texto rola de forma contínua: a linha que você está lendo fica numa guia perto do topo da tela, com o que já foi lido logo acima e o que vem depois logo abaixo. Quem dita o ritmo é você: o texto **segue a sua voz** ou anda numa **velocidade** que você ajusta ao vivo. Com a **câmera ligada**, você se vê ao fundo, com o texto por cima, e grava o vídeo direto da tela — inclusive no celular.
 
 - **Acesso:** `/#teleprompter`
 - **Status:** beta
@@ -17,6 +17,61 @@ Leia seu roteiro olhando para a câmera. O texto rola de forma contínua: a linh
 5. Ao final, escolha **Reiniciar** ou **Voltar ao editor**.
 
 O roteiro e as preferências ficam salvos neste navegador; **Limpar** pede um segundo clique para confirmar.
+
+## Gravar com a câmera
+
+1. No editor, ligue **Câmera** e escolha quanto **escurecer a imagem** (leve, médio, forte) e a câmera **frontal** ou **traseira**.
+2. Toque em **🎥 Abrir câmera** e permita o acesso à câmera e ao microfone. Você se vê ao fundo, escurecido, com o texto por cima em cor viva.
+3. Use os botões grandes na parte de baixo:
+
+| Botão                   | O que faz                                                            |
+| ----------------------- | -------------------------------------------------------------------- |
+| **●** (círculo central) | grava: contagem regressiva e, depois, grava e rola o texto           |
+| **⏸ / ▶** (central)     | durante a gravação, pausa e continua **a gravação e o texto juntos** |
+| **⏹ Parar**             | encerra a gravação e mostra a prévia                                 |
+| **▶ Ensaiar**           | rola o texto sem gravar                                              |
+| **Sair**                | volta ao editor (se estiver gravando, a gravação é guardada)         |
+
+No topo aparece **● REC 01:23** (ou **PAUSADO**). Na linha de cima ficam ↑ ↓, voz/velocidade, ± velocidade e **🔄** para trocar de câmera.
+
+4. Ao parar, assista à prévia e toque em **Baixar** ou **Compartilhar** (no celular, o Compartilhar permite salvar na galeria ou enviar por um app).
+5. As gravações da sessão também aparecem no editor, em **Gravações**. Elas ficam só neste navegador até você fechar a página: o navegador avisa se ainda houver alguma não salva.
+
+O vídeo gravado contém **só a câmera e o microfone**, sem o texto. A câmera frontal aparece espelhada na tela, como um espelho, mas o vídeo sai normal. Formato: MP4 quando o navegador suporta, senão WebM.
+
+### No celular
+
+A câmera só funciona em **HTTPS** (ou em `localhost`). Para usar no celular na mesma rede Wi-Fi:
+
+1. No computador, rode `npm run dev:celular`.
+2. No celular, abra `https://<IP do computador>:3000/#teleprompter` (o IP aparece no terminal; no Windows também em `ipconfig`).
+3. O certificado é autoassinado: o navegador mostra um aviso; toque em **Avançado → Continuar**.
+
+Alternativa sem aviso de certificado: publicar o app num serviço com HTTPS (ex.: Vercel); o teleprompter roda inteiro no navegador.
+
+**Observação:** em alguns Android, gravar e o reconhecimento de voz não usam o microfone ao mesmo tempo. Se o indicador mostrar "Falha na voz", troque para **⏩ Velocidade**.
+
+## Formatação do texto
+
+Use etiquetas entre chaves para colorir e destacar trechos:
+
+```
+{amarelo}Atenção{/} para este ponto.
+Isto é {grande negrito}muito importante{/}.
+{azul}Texto azul com {sublinhado}parte sublinhada{/} dentro.{/}
+```
+
+| Grupo   | Palavras                                                                  |
+| ------- | ------------------------------------------------------------------------- |
+| Cores   | amarelo, vermelho, verde, azul, ciano, rosa, laranja, roxo, branco, cinza |
+| Tamanho | grande, pequeno                                                           |
+| Fonte   | serifa, mono                                                              |
+| Estilo  | negrito, itálico, sublinhado, destaque                                    |
+
+- Combine palavras numa etiqueta (`{verde grande}`), aninhe etiquetas e feche cada uma com `{/}`.
+- No editor, selecione o trecho e use **Formatar** (N, I, S, A+, A−, Destaque, Serifa) ou as **bolinhas de cor**. **Prévia** mostra o resultado.
+- **Cor do texto** define a cor base de todo o texto (branco, amarelo, ciano ou verde); as `{cores}` têm prioridade.
+- Etiquetas com palavras desconhecidas aparecem como texto normal.
 
 ## Seguir a voz
 
@@ -68,6 +123,7 @@ O botão funciona como **liga/desliga**: se o roteiro já tem marcações, ele v
 | roda do mouse    | reposicionar fino                               |
 | `+` / `−`        | velocidade ±10 ppm (modo velocidade)            |
 | `V`              | alternar voz ↔ velocidade                       |
+| `G`              | gravar / parar gravação (modo câmera)           |
 | `R`              | reiniciar com contagem                          |
 | `F`              | alternar modo foco                              |
 | `Esc`            | sair (no modo foco, sai primeiro da tela cheia) |
@@ -89,7 +145,14 @@ O botão funciona como **liga/desliga**: se o roteiro já tem marcações, ele v
 | `Teleprompter.tsx`        | alterna editor ↔ apresentação; preferências; tela cheia          |
 | `Editor.tsx`              | tela de edição, condução e inserção de marcações                 |
 | `Session.tsx`             | laço de rolagem (requestAnimationFrame), voz/velocidade, atalhos |
-| `Presenter.tsx`           | visual: guia, contexto, controles (encaixada e foco via portal)  |
+| `Presenter.tsx`           | visual: guia, contexto, controles (encaixada, foco e câmera)     |
+| `TokenView.tsx`           | palavras formatadas e marcações (apresentação e prévia)          |
+| `format.ts`               | etiquetas de formatação `{…}` (puro)                             |
+| `CameraBar.tsx`           | controles de toque do modo câmera e indicador REC                |
+| `Takes.tsx`               | gravações: prévia, baixar, compartilhar, lista                   |
+| `camera.ts`               | tipos e funções puras de câmera e gravação                       |
+| `useCamera.ts`            | câmera + microfone (getUserMedia)                                |
+| `useRecorder.ts`          | gravação (MediaRecorder), pausa e cronômetro                     |
 | `scroll.ts`               | geometria da rolagem contínua (puro)                             |
 | `voice.ts`                | alinhamento das palavras faladas com o roteiro (puro)            |
 | `useSpeechRecognition.ts` | microfone via Web Speech API, com reinício automático            |

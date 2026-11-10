@@ -95,6 +95,37 @@ Regras de inserção:
 
 `PageUp/PageDown` permitem usar passadores de slides.
 
+### Formatação do texto
+
+Etiquetas entre chaves formatam trechos do roteiro: `{amarelo}texto{/}`, `{grande negrito}texto{/}`. Várias palavras numa etiqueta se combinam; etiquetas podem ser aninhadas; `{/}` fecha a última aberta; estilos não atravessam parágrafos. Etiquetas com palavras desconhecidas aparecem como texto.
+
+| Grupo   | Palavras                                                                        |
+| ------- | ------------------------------------------------------------------------------- |
+| Cores   | amarelo, vermelho, verde, azul, ciano, rosa, laranja, roxo, branco, cinza       |
+| Tamanho | grande (1,2×), pequeno (0,85×)                                                  |
+| Fonte   | serifa, mono                                                                    |
+| Estilo  | negrito, itálico (ou italico), sublinhado, destaque (fundo amarelo translúcido) |
+
+- Editor: botões **Formatar** (N, I, S, A+, A−, Destaque, Serifa) e amostras de cor envolvem a seleção com a etiqueta (sem seleção, inserem `texto` selecionado). **Prévia** mostra o roteiro formatado.
+- **Cor do texto** (branco, amarelo, ciano, verde) define a cor base do texto lido; `{cores}` têm prioridade. Marcações mantêm suas cores próprias.
+- A quebra de linhas considera tamanho e fonte das palavras formatadas.
+- A marcação automática ignora as etiquetas ao analisar frases e nunca as remove.
+
+### Câmera e gravação (modo câmera)
+
+1. Editor: **Câmera** desligada/ligada; com câmera: **Escurecer a imagem** (leve 35%, médio 55%, forte 72%) e **Usar câmera** frontal/traseira. O botão de início vira **🎥 Abrir câmera** e a apresentação ocupa sempre a tela toda.
+2. A câmera aparece ao fundo, coberta pela camada escura; o texto aparece por cima em cor viva, com sombra para legibilidade. A frontal é espelhada na tela (como um espelho); **a gravação sai sem espelhar e sem o texto** (só câmera + microfone).
+3. Ao abrir, o texto fica **parado** aguardando:
+   - **● Gravar** (botão circular grande, central): contagem regressiva → começa a gravar e a rolar o texto a partir da posição atual (do início, se o roteiro já tinha terminado);
+   - **▶ Ensaiar**: rola o texto sem gravar.
+4. Gravando: o botão central vira **⏸ / ▶** e pausa/retoma **gravação e texto juntos**; **⏹ Parar** encerra a gravação; indicador **● REC mm:ss** (ou **PAUSADO**) no topo. Ao fim do roteiro, a gravação continua até **⏹ Parar gravação**.
+5. Ao parar: prévia do vídeo com **Baixar** e **Compartilhar** (Web Share com arquivo: no celular, salvar na galeria ou enviar por app) e **Voltar à câmera**.
+6. Gravações ficam na memória do navegador e aparecem no editor (**Gravações (N)**, salva/não salva, baixar, compartilhar, remover). Fechar a página com gravação não salva pede confirmação. **Sair** gravando encerra e guarda a gravação.
+7. Formato: MP4 quando o navegador suportar (Safari, Chrome recente), senão WebM. Nome `teleprompter-AAAAMMDD-HHMMSS.mp4|webm`.
+8. Controles pensados para toque: botões de 56px (central 76px) na parte de baixo, área segura do celular respeitada; ↑ ↓, voz/velocidade, ± ppm e **🔄 trocar câmera** (quando há mais de uma, fora da gravação) numa linha secundária.
+9. Sem permissão/câmera/HTTPS: aviso explicando o motivo; **Gravar** fica desabilitado e o ensaio continua funcionando.
+10. Atalho `G`: gravar / parar gravação.
+
 ## Critérios de aceite
 
 - [x] Parser reconhece parágrafos, pausas (com e sem segundos), respira, ênfase, indicações e notas.
@@ -117,6 +148,12 @@ Regras de inserção:
 - [x] Roteiro e preferências persistem ao recarregar.
 - [x] Marcações exibidas em cores próprias, distintas do texto lido: pausa âmbar, respira ciano, indicação rosa.
 - [x] Controles com rótulos acessíveis; contagem anunciada por `aria-live`.
+- [x] Formatação: etiquetas de cor, tamanho, fonte e estilo, combináveis e aninháveis, sem alterar espaços; desconhecidas viram texto.
+- [x] Botões de formatação envolvem a seleção; prévia mostra o texto formatado; cor base do texto configurável.
+- [x] Modo câmera: câmera ao fundo escurecida, texto por cima; começa parado aguardando Gravar/Ensaiar.
+- [x] Gravar inicia a gravação (após a contagem); pausar/continuar afeta gravação e texto juntos; Parar entrega a gravação.
+- [x] Gravações sobrevivem a sair da apresentação, podem ser baixadas/compartilhadas/removidas e o fechamento da página avisa se houver não salvas.
+- [x] Sem acesso à câmera: aviso, Gravar desabilitado, ensaio disponível.
 - [x] Usa componentes e tokens de `@/design-system`.
 
 ## Suposições
@@ -124,13 +161,17 @@ Regras de inserção:
 - Largura de linha medida com a fonte real (canvas); sem canvas, usa contagem de caracteres.
 - Reconhecimento de fala pela Web Speech API (`pt-BR`), disponível no Chrome e no Edge; no Chrome, o áudio é processado em servidores do Google e exige internet.
 - Números falados ("vinte por cento") não casam com algarismos ("20%"); o alinhamento se reancora nas palavras seguintes.
+- Câmera e microfone exigem contexto seguro (HTTPS ou localhost). No celular, usar `npm run dev:celular` (HTTPS na rede local, certificado autoassinado) ou publicar o app em HTTPS.
+- Em alguns celulares Android, gravar (microfone em uso) e o reconhecimento de voz não funcionam ao mesmo tempo; nesse caso o modo voz mostra falha e a gravação segue no modo velocidade.
 
 ## Fora de escopo
 
 - Reconhecimento de fala local/offline.
+- Gravar o texto sobreposto no vídeo.
 - Espelhamento horizontal (vidro de teleprompter físico).
 - Ajuste do tamanho da fonte e da largura da coluna.
 - Controle remoto pelo celular.
+- Guardar gravações entre sessões (ficam só na memória até fechar a página).
 
 ## Arquivos
 
@@ -138,7 +179,14 @@ Regras de inserção:
 - `Teleprompter.tsx` — alterna editor ↔ apresentação, preferências e tela cheia
 - `Session.tsx` — apresentação em andamento: laço de rolagem, voz/velocidade, reposicionamento, atalhos e wake lock
 - `Editor.tsx` / `Editor.module.css` — tela de edição
-- `Presenter.tsx` / `Presenter.module.css` — apresentação (guia, contexto, controles; encaixada e foco)
+- `Presenter.tsx` / `Presenter.module.css` — apresentação (guia, contexto, controles; encaixada, foco e câmera)
+- `TokenView.tsx` / `TokenView.module.css` — palavras formatadas e marcações (apresentação e prévia)
+- `format.ts` — etiquetas de formatação (puro)
+- `CameraBar.tsx` / `CameraBar.module.css` — controles de toque do modo câmera e indicador REC
+- `Takes.tsx` / `Takes.module.css` — gravações: prévia, baixar, compartilhar, lista
+- `camera.ts` — tipos e funções puras de câmera/gravação
+- `useCamera.ts` — câmera + microfone (getUserMedia)
+- `useRecorder.ts` — gravação (MediaRecorder)
 - `autoMark.ts` — marcação automática (pura)
 - `script.ts` — parser, quebra de linhas e durações (puro)
 - `scroll.ts` — geometria da rolagem contínua (puro)

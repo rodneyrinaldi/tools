@@ -6,15 +6,16 @@ Aplicação Next.js (App Router, TypeScript estrito) com **uma única tela** que
 
 ## Comandos
 
-| Ação               | Comando             |
-| ------------------ | ------------------- |
-| Dev server         | `npm run dev`       |
-| Validação completa | `npm run check`     |
-| Tipos              | `npm run typecheck` |
-| Lint               | `npm run lint`      |
-| Testes             | `npm run test`      |
-| Formatar           | `npm run format`    |
-| Build de produção  | `npm run build`     |
+| Ação                           | Comando               |
+| ------------------------------ | --------------------- |
+| Dev server                     | `npm run dev`         |
+| Dev no celular (HTTPS na rede) | `npm run dev:celular` |
+| Validação completa             | `npm run check`       |
+| Tipos                          | `npm run typecheck`   |
+| Lint                           | `npm run lint`        |
+| Testes                         | `npm run test`        |
+| Formatar                       | `npm run format`      |
+| Build de produção              | `npm run build`       |
 
 Antes de declarar uma tarefa concluída, rode `npm run check` e informe o resultado real.
 

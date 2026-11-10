@@ -1,0 +1,106 @@
+.emphasis {
+  font-weight: 700;
+  color: var(--ds-color-accent-strong);
+}
+
+/* Formatação escolhida pelo usuário ({amarelo}, {grande}, …). */
+.color-yellow {
+  color: var(--ds-palette-yellow);
+}
+.color-red {
+  color: var(--ds-palette-red);
+}
+.color-green {
+  color: var(--ds-palette-green);
+}
+.color-blue {
+  color: var(--ds-palette-blue);
+}
+.color-cyan {
+  color: var(--ds-palette-cyan);
+}
+.color-pink {
+  color: var(--ds-palette-pink);
+}
+.color-orange {
+  color: var(--ds-palette-orange);
+}
+.color-purple {
+  color: var(--ds-palette-purple);
+}
+.color-white {
+  color: var(--ds-palette-white);
+}
+.color-gray {
+  color: var(--ds-palette-gray);
+}
+
+/* = SIZE_SCALE (format.ts) */
+.size-large {
+  font-size: 1.2em;
+}
+.size-small {
+  font-size: 0.85em;
+}
+
+.font-serif {
+  font-family: var(--ds-font-serif);
+}
+.font-mono {
+  font-family: var(--ds-font-mono);
+}
+
+.bold {
+  font-weight: 700;
+}
+.italic {
+  font-style: italic;
+}
+.underline {
+  text-decoration: underline;
+  text-decoration-thickness: 0.06em;
+  text-underline-offset: 0.12em;
+}
+.highlight {
+  padding: 0 0.12em;
+  border-radius: 0.15em;
+  background: rgb(253 224 71 / 0.28);
+}
+
+/*
+ * Marcações nunca usam a cor do texto lido: cada tipo tem cor própria
+ * (pausa = âmbar, respira = ciano, indicação = rosa) para não serem lidas em voz alta.
+ */
+.marker {
+  display: inline-block;
+  vertical-align: 0.35em;
+  padding: 0 0.45em;
+  font-size: 0.6em;
+  font-weight: 600;
+  font-style: normal;
+  line-height: 1.6;
+  border: 1px solid;
+  border-radius: var(--ds-radius-full);
+  text-shadow: none;
+}
+
+.pause {
+  background: rgb(251 191 36 / 0.16);
+  border-color: rgb(251 191 36 / 0.45);
+  color: var(--ds-color-warning);
+  font-family: var(--ds-font-mono);
+}
+
+.breath {
+  background: rgb(58 214 197 / 0.16);
+  border-color: rgb(58 214 197 / 0.45);
+  color: var(--ds-color-accent-2);
+}
+
+.cue {
+  background: rgb(244 114 182 / 0.14);
+  border-color: rgb(244 114 182 / 0.45);
+  border-style: dashed;
+  color: var(--ds-color-accent-3);
+  font-style: italic;
+}

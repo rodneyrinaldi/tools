@@ -30,6 +30,24 @@ describe("playbackReducer", () => {
     expect(playbackReducer(running, { type: "moved" })).toBe(running);
   });
 
+  it("sem início automático, começa parado e 'start' dispara a contagem", () => {
+    const idle = initialPlayback(3, false);
+    expect(idle).toEqual({ phase: "paused", countdown: 0 });
+    expect(playbackReducer(idle, { type: "start", countdown: 3 })).toEqual({
+      phase: "countdown",
+      countdown: 3,
+    });
+    expect(playbackReducer(idle, { type: "start", countdown: 0 }).phase).toBe("running");
+  });
+
+  it("'pause' só pausa o que está rodando", () => {
+    expect(
+      playbackReducer({ phase: "running", countdown: 0 }, { type: "pause" }).phase,
+    ).toBe("paused");
+    const finished: PlaybackState = { phase: "finished", countdown: 0 };
+    expect(playbackReducer(finished, { type: "pause" })).toBe(finished);
+  });
+
   it("restart volta ao início com contagem", () => {
     const finished: PlaybackState = { phase: "finished", countdown: 0 };
     expect(playbackReducer(finished, { type: "restart", countdown: 3 })).toEqual(

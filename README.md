@@ -18,14 +18,15 @@ Uma rotina abre direto pelo hash da URL: `http://localhost:3000/#<id-da-rotina>`
 
 ### Scripts
 
-| Script               | O que faz                                |
-| -------------------- | ---------------------------------------- |
-| `npm run dev`        | Servidor de desenvolvimento              |
-| `npm run build`      | Build de produção                        |
-| `npm run start`      | Serve o build de produção                |
-| `npm run check`      | typecheck + lint + format:check + testes |
-| `npm run test:watch` | Testes em modo watch                     |
-| `npm run format`     | Formata com Prettier                     |
+| Script                | O que faz                                                |
+| --------------------- | -------------------------------------------------------- |
+| `npm run dev`         | Servidor de desenvolvimento                              |
+| `npm run dev:celular` | Dev em HTTPS na rede local (câmera/microfone no celular) |
+| `npm run build`       | Build de produção                                        |
+| `npm run start`       | Serve o build de produção                                |
+| `npm run check`       | typecheck + lint + format:check + testes                 |
+| `npm run test:watch`  | Testes em modo watch                                     |
+| `npm run format`      | Formata com Prettier                                     |
 
 ### Ferramentas
 

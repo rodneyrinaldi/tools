@@ -17,15 +17,19 @@ Fonte: `src/design-system/`. Spec: `specs/002-design-system.md`.
 
 ## Componentes (`import { ... } from "@/design-system"`)
 
-| Componente         | Uso                                           | Props principais                                                             |
-| ------------------ | --------------------------------------------- | ---------------------------------------------------------------------------- |
-| `Surface`          | Painel de vidro; base de cards e seções       | `as`, `padding: none\|sm\|md\|lg`, `variant: default\|strong`, `interactive` |
-| `Button`           | Ações                                         | `variant: primary\|secondary\|ghost`, `size: sm\|md`                         |
-| `Badge`            | Status/etiquetas                              | `tone: neutral\|accent\|success\|warning\|danger`                            |
-| `TextField`        | Input com label e dica acessíveis             | `label` (obrigatório), `hint`, demais props de `<input>`                     |
-| `TextArea`         | Texto longo com label e dica                  | `label` (obrigatório), `hint`, `ref`, demais props de `<textarea>`           |
-| `SegmentedControl` | Escolha exclusiva entre poucas opções (radio) | `label`, `options`, `value`, `onChange`                                      |
-| `cx`               | Concatena classes condicionais                | —                                                                            |
+| Componente         | Uso                                           | Props principais                                                              |
+| ------------------ | --------------------------------------------- | ----------------------------------------------------------------------------- |
+| `Surface`          | Painel de vidro; base de cards e seções       | `as`, `padding: none\|sm\|md\|lg`, `variant: default\|strong`, `interactive`  |
+| `Button`           | Ações                                         | `variant: primary\|secondary\|ghost\|danger`, `size: sm\|md\|lg` (lg = toque) |
+| `Badge`            | Status/etiquetas                              | `tone: neutral\|accent\|success\|warning\|danger`                             |
+| `TextField`        | Input com label e dica acessíveis             | `label` (obrigatório), `hint`, demais props de `<input>`                      |
+| `TextArea`         | Texto longo com label e dica                  | `label` (obrigatório), `hint`, `ref`, demais props de `<textarea>`            |
+| `SegmentedControl` | Escolha exclusiva entre poucas opções (radio) | `label`, `options`, `value`, `onChange`                                       |
+| `cx`               | Concatena classes condicionais                | —                                                                             |
+
+## Paleta de conteúdo
+
+`--ds-palette-{yellow,red,green,blue,cyan,pink,orange,purple,white,gray}`: cores vivas para **conteúdo escolhido pelo usuário** (ex.: cores do roteiro do teleprompter). Não use para UI. Fonte serifada: `--ds-font-serif`.
 
 ## Regras para estilos
 

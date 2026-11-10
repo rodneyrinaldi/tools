@@ -3,8 +3,9 @@ import { cx } from "../cx";
 import styles from "./Button.module.css";
 
 export type ButtonProps = ComponentPropsWithoutRef<"button"> & {
-  variant?: "primary" | "secondary" | "ghost";
-  size?: "sm" | "md";
+  variant?: "primary" | "secondary" | "ghost" | "danger";
+  /** `lg`: alvo de toque grande (56px), para controles usados no celular. */
+  size?: "sm" | "md" | "lg";
 };
 
 export function Button({

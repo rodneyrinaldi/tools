@@ -10,11 +10,15 @@ export type PlaybackState = { phase: Phase; countdown: number };
 export type PlaybackAction =
   | { type: "tick" }
   | { type: "toggle" }
+  | { type: "pause" }
   | { type: "moved" }
   | { type: "finish" }
+  | { type: "start"; countdown: number }
   | { type: "restart"; countdown: number };
 
-export function initialPlayback(countdown: number): PlaybackState {
+/** Contagem (ou direto rodando, se 0). Com `autoStart: false`, começa parado aguardando. */
+export function initialPlayback(countdown: number, autoStart = true): PlaybackState {
+  if (!autoStart) return { phase: "paused", countdown: 0 };
   return countdown > 0
     ? { phase: "countdown", countdown }
     : { phase: "running", countdown: 0 };
@@ -36,11 +40,14 @@ export function playbackReducer(
         return { phase: "running", countdown: 0 };
       }
       return state;
+    case "pause":
+      return state.phase === "running" ? { ...state, phase: "paused" } : state;
     case "moved":
       // Reposicionar depois do fim reabre a leitura, pausada.
       return state.phase === "finished" ? { ...state, phase: "paused" } : state;
     case "finish":
       return { ...state, phase: "finished" };
+    case "start":
     case "restart":
       return initialPlayback(action.countdown);
   }

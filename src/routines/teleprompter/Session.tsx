@@ -14,7 +14,10 @@ import {
   positionToToken,
   tokenToPosition,
 } from "./scroll";
-import type { Drive } from "./storage";
+import type { DimLevel, Facing, Take } from "./camera";
+import type { BaseTextColor, Drive } from "./storage";
+import { useCamera } from "./useCamera";
+import { useRecorder } from "./useRecorder";
 import {
   isSpeechRecognitionSupported,
   useSpeechRecognition,
@@ -35,12 +38,19 @@ const VOICE_SMOOTHING_MS = 220;
 const VOICE_MIN_SPEED = 0.0015;
 const FALLBACK_FONT_PX = 32;
 
+export type CameraOptions = { dim: DimLevel; facing: Facing };
+
 type SessionProps = {
   text: string;
   drive: Drive;
   initialWordsPerMinute: number;
   holdPauses: boolean;
   countdown: number;
+  textColor: BaseTextColor;
+  /** Câmera ao fundo com gravação; `null` = sem câmera. */
+  camera: CameraOptions | null;
+  onTake: (take: Take) => void;
+  onTakeSaved: (id: string) => void;
   focus: boolean;
   onToggleFocus: () => void;
   onExit: () => void;
@@ -53,6 +63,10 @@ export function Session({
   initialWordsPerMinute,
   holdPauses,
   countdown,
+  textColor,
+  camera: cameraOptions,
+  onTake,
+  onTakeSaved,
   focus,
   onToggleFocus,
   onExit,
@@ -62,7 +76,23 @@ export function Session({
   const [drive, setDrive] = useState<Drive>(() =>
     initialDrive === "voice" && isSpeechRecognitionSupported() ? "voice" : "speed",
   );
-  const [playback, dispatch] = useReducer(playbackReducer, countdown, initialPlayback);
+  // Com câmera, espera a pessoa apertar Gravar ou Ensaiar.
+  const [playback, dispatch] = useReducer(
+    playbackReducer,
+    { countdown, autoStart: !cameraOptions },
+    (init) => initialPlayback(init.countdown, init.autoStart),
+  );
+
+  // Câmera e gravação.
+  const [facing, setFacing] = useState<Facing>(cameraOptions?.facing ?? "user");
+  const camera = useCamera(Boolean(cameraOptions), facing);
+  const [lastTake, setLastTake] = useState<Take | null>(null);
+  const recorder = useRecorder(camera.stream, (take) => {
+    setLastTake(take);
+    onTake(take);
+  });
+  /** Gravar foi pedido: a gravação começa quando a contagem terminar. */
+  const recordIntent = useRef(false);
   // Token inicial da linha sob a guia: muda só quando a linha muda e sobrevive a re-quebras.
   const [lineToken, setLineToken] = useState(0);
 
@@ -129,12 +159,19 @@ export function Session({
     paint();
   }, [lines, words, paint]);
 
-  // Contagem regressiva.
+  // Contagem regressiva (ao chegar a zero, começa a gravação pedida).
+  const startRecording = recorder.start;
   useEffect(() => {
     if (playback.phase !== "countdown") return;
-    const id = setTimeout(() => dispatch({ type: "tick" }), 1000);
+    const id = setTimeout(() => {
+      if (playback.countdown <= 1 && recordIntent.current) {
+        recordIntent.current = false;
+        startRecording();
+      }
+      dispatch({ type: "tick" });
+    }, 1000);
     return () => clearTimeout(id);
-  }, [playback.phase, playback.countdown]);
+  }, [playback.phase, playback.countdown, startRecording]);
 
   // Laço de animação.
   useEffect(() => {
@@ -221,6 +258,45 @@ export function Session({
     dispatch({ type: "restart", countdown });
   }, [commit, forgetHeard, countdown]);
 
+  /** Pausa/continua o texto e, se estiver gravando, a gravação junto. */
+  function togglePlay() {
+    if (playback.phase === "countdown" && recordIntent.current) {
+      recordIntent.current = false;
+      recorder.start();
+    } else if (recorder.state === "recording") {
+      recorder.pause();
+    } else if (recorder.state === "paused") {
+      recorder.resume();
+    }
+    dispatch({ type: "toggle" });
+  }
+
+  /** Gravar: contagem regressiva e então grava e rola o texto a partir da posição atual. */
+  function record() {
+    if (!camera.stream || !recorder.supported || recorder.state !== "inactive") return;
+    setLastTake(null);
+    if (playback.phase === "finished") {
+      engine.current = { ...engine.current, target: 0, cursor: 0, pending: null };
+      commit(0);
+      forgetHeard();
+    }
+    if (countdown > 0) recordIntent.current = true;
+    else recorder.start();
+    dispatch({ type: "start", countdown });
+  }
+
+  async function stopRecording() {
+    recordIntent.current = false;
+    await recorder.stop();
+    dispatch({ type: "pause" });
+  }
+
+  /** Sair: encerra a gravação em andamento (ela vai para a lista) antes de sair. */
+  async function exit() {
+    if (recorder.state !== "inactive") await recorder.stop();
+    onExit();
+  }
+
   function changeSpeed(delta: number) {
     if (drive !== "speed") return;
     setWordsPerMinute((wpm) => clamp(wpm + delta, MIN_WPM, MAX_WPM));
@@ -265,8 +341,10 @@ export function Session({
         return;
       }
       const actions: Record<string, () => void> = {
-        " ": () => dispatch({ type: "toggle" }),
-        Escape: focus ? onToggleFocus : onExit,
+        " ": togglePlay,
+        Escape: focus && !cameraOptions ? onToggleFocus : () => void exit(),
+        g: () => (recorder.state === "inactive" ? record() : void stopRecording()),
+        G: () => (recorder.state === "inactive" ? record() : void stopRecording()),
         r: restart,
         R: restart,
         f: onToggleFocus,
@@ -312,10 +390,29 @@ export function Session({
       wordsPerMinute={wordsPerMinute}
       remainingMs={remainingMs}
       focus={focus}
+      textColor={textColor}
+      camera={
+        cameraOptions && {
+          stream: camera.stream,
+          error: camera.error,
+          mirrored: facing === "user",
+          dim: cameraOptions.dim,
+          recorder: recorder.state,
+          canRecord: Boolean(camera.stream) && recorder.supported,
+          canFlip: camera.cameraCount > 1,
+          elapsedMs: recorder.elapsedMs,
+          lastTake,
+          onRecord: record,
+          onStop: () => void stopRecording(),
+          onFlip: () => setFacing((f) => (f === "user" ? "environment" : "user")),
+          onTakeSaved,
+          onCloseTake: () => setLastTake(null),
+        }
+      }
       trackRef={setTrack}
       onLayout={handleLayout}
       onWheel={handleWheel}
-      onToggle={() => dispatch({ type: "toggle" })}
+      onToggle={togglePlay}
       onPrevious={() => moveBy(-1, true)}
       onNext={() => moveBy(1, true)}
       onRestart={restart}
@@ -323,7 +420,7 @@ export function Session({
       onFaster={() => changeSpeed(WPM_STEP)}
       onSwitchDrive={switchDrive}
       onToggleFocus={onToggleFocus}
-      onExit={onExit}
+      onExit={() => void exit()}
     />
   );
 }

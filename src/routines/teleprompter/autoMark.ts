@@ -4,6 +4,8 @@
  * Respeita marcações existentes: rodar duas vezes não duplica nada.
  */
 
+import { STYLE_TAG } from "./format";
+
 export type AutoMarkResult = { text: string; added: number };
 
 /** Palavras sem respiro a partir das quais o fim de frase recebe [respira]. */
@@ -17,7 +19,15 @@ export const BREATH = "[respira]";
 export const SMILE = "[sorria]";
 export const LOOK = "[olhe para a câmera]";
 
-type SourceToken = { text: string; start: number; end: number; marker: boolean };
+type SourceToken = {
+  /** Texto sem etiquetas de formatação. */
+  text: string;
+  start: number;
+  end: number;
+  marker: boolean;
+  /** O token original tinha etiquetas de formatação. */
+  styled: boolean;
+};
 type Insertion = { at: number; text: string } | { at: number; end: number; text: string };
 
 const TOKEN = /\[[^\]\n]*\]|\S+/g;
@@ -74,7 +84,7 @@ export function autoMark(source: string): AutoMarkResult {
         wordsSinceBreath += 1;
 
         // Ênfase em percentuais fora de trechos já enfatizados.
-        if (!inEmphasis && !token.text.includes("*")) {
+        if (!inEmphasis && !token.styled && !token.text.includes("*")) {
           const percent = PERCENT.exec(token.text);
           if (percent) {
             insertions.push({
@@ -177,11 +187,16 @@ function collectBlocks(source: string): SourceToken[][] {
       current = [];
     } else if (!trimmed.startsWith("//")) {
       for (const match of line.matchAll(TOKEN)) {
+        // As regras olham o texto sem etiquetas de formatação ({amarelo}fim.{/} → fim.);
+        // as posições continuam as do texto original.
+        const plain = match[0].replace(STYLE_TAG, "");
+        if (!plain) continue;
         current.push({
-          text: match[0],
+          text: plain,
           start: offset + match.index,
           end: offset + match.index + match[0].length,
           marker: match[0].startsWith("["),
+          styled: plain !== match[0],
         });
       }
     }

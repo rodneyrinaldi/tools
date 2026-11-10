@@ -95,13 +95,26 @@
   will-change: transform;
 }
 
+/* Cor base do texto lido (preferência); {cores} do roteiro têm prioridade. */
+.root {
+  --tp-text: var(--ds-palette-white);
+}
+.root[data-text-color="yellow"] {
+  --tp-text: var(--ds-palette-yellow);
+}
+.root[data-text-color="cyan"] {
+  --tp-text: var(--ds-palette-cyan);
+}
+.root[data-text-color="green"] {
+  --tp-text: var(--ds-palette-green);
+}
+
 .line {
   height: var(--tp-line-height);
   line-height: var(--tp-line-height);
   white-space: nowrap;
-  transition:
-    opacity var(--tp-fade) var(--ds-ease),
-    color var(--tp-fade) var(--ds-ease);
+  color: var(--tp-text);
+  transition: opacity var(--tp-fade) var(--ds-ease);
 }
 
 /* Já lidas: visíveis o bastante para se reposicionar. */
@@ -111,7 +124,6 @@
 
 .line[data-state="current"] {
   opacity: 1;
-  color: #fff;
 }
 
 /* Próximas: legíveis, para planejar a frase. */
@@ -123,45 +135,90 @@
   margin-top: var(--tp-paragraph-gap);
 }
 
-.emphasis {
-  font-weight: 700;
-  color: var(--ds-color-accent-strong);
+/* ---------- Modo câmera: vídeo ao fundo, escurecido; texto vivo por cima ---------- */
+
+.withCamera {
+  background: #000;
 }
 
-/*
- * Marcações nunca usam a cor do texto lido: cada tipo tem cor própria
- * (pausa = âmbar, respira = ciano, indicação = rosa) para não serem lidas em voz alta.
- */
-.marker {
-  display: inline-block;
-  vertical-align: 0.35em;
-  padding: 0 0.45em;
-  font-size: 0.6em;
+.cameraLayer {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+}
+
+.cameraVideo {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Frontal espelhada na tela, como um espelho (a gravação sai sem espelhar). */
+.mirrored {
+  transform: scaleX(-1);
+}
+
+.cameraDim {
+  position: absolute;
+  inset: 0;
+  background: #000;
+}
+
+.withCamera .viewport {
+  z-index: 1;
+}
+
+.withCamera .line {
+  text-shadow:
+    0 1px 3px rgb(0 0 0 / 0.95),
+    0 0 18px rgb(0 0 0 / 0.65);
+}
+
+.withCamera .line[data-state="past"] {
+  opacity: 0.5;
+}
+
+.withCamera .line[data-state="next"] {
+  opacity: 0.85;
+}
+
+/* No celular a barra de controles fica embaixo: o texto termina antes dela. */
+.withCamera .column {
+  bottom: 168px;
+}
+
+.withCamera .alert {
+  bottom: 184px;
+}
+
+.overlaySoft {
+  background: rgb(0 0 0 / 0.35);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.takeSheet {
+  display: grid;
+  justify-items: center;
+  gap: var(--ds-space-3);
+  width: min(100%, 480px);
+  padding: var(--ds-space-5);
+  background: var(--ds-color-bg-elevated);
+  border: 1px solid var(--ds-glass-border-strong);
+  border-radius: var(--ds-radius-lg);
+}
+
+.takeTitle {
+  font-size: var(--ds-text-lg);
   font-weight: 600;
-  line-height: 1.6;
-  border: 1px solid;
-  border-radius: var(--ds-radius-full);
 }
 
-.pause {
-  background: rgb(251 191 36 / 0.16);
-  border-color: rgb(251 191 36 / 0.45);
-  color: var(--ds-color-warning);
-  font-family: var(--ds-font-mono);
-}
-
-.breath {
-  background: rgb(58 214 197 / 0.16);
-  border-color: rgb(58 214 197 / 0.45);
-  color: var(--ds-color-accent-2);
-}
-
-.cue {
-  background: rgb(244 114 182 / 0.14);
-  border-color: rgb(244 114 182 / 0.45);
-  border-style: dashed;
-  color: var(--ds-color-accent-3);
-  font-style: italic;
+.takeVideo {
+  width: 100%;
+  max-height: 50vh;
+  border-radius: var(--ds-radius-md);
+  background: #000;
 }
 
 .overlay {
@@ -251,6 +308,10 @@
   transition:
     opacity var(--ds-duration) var(--ds-ease),
     transform var(--ds-duration) var(--ds-ease);
+}
+
+.controls[hidden] {
+  display: none;
 }
 
 .focus .controls {

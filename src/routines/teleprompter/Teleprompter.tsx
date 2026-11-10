@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import type { Take } from "./camera";
 import { Editor } from "./Editor";
 import { SPEEDS } from "./script";
 import { Session } from "./Session";
@@ -13,6 +14,8 @@ export default function Teleprompter() {
   const [preferences, setPreferences] = useState<Preferences>(loadPreferences);
   const [mode, setMode] = useState<Mode>({ kind: "editing" });
   const [focus, setFocus] = useState(false);
+  // Gravações da sessão: vivem aqui para sobreviver ao sair da apresentação.
+  const [takes, setTakes] = useState<Take[]>([]);
 
   useEffect(() => savePreferences(preferences), [preferences]);
 
@@ -50,8 +53,28 @@ export default function Teleprompter() {
     };
   }, [focus]);
 
+  // Avisa antes de fechar a página com gravações não salvas.
+  const hasUnsaved = takes.some((take) => !take.saved);
+  useEffect(() => {
+    if (!hasUnsaved) return;
+    const onBeforeUnload = (event: BeforeUnloadEvent) => event.preventDefault();
+    window.addEventListener("beforeunload", onBeforeUnload);
+    return () => window.removeEventListener("beforeunload", onBeforeUnload);
+  }, [hasUnsaved]);
+
+  // Libera a memória dos vídeos ao sair da rotina.
+  const takesRef = useRef(takes);
+  useEffect(() => {
+    takesRef.current = takes;
+  });
+  useEffect(
+    () => () => takesRef.current.forEach((take) => URL.revokeObjectURL(take.url)),
+    [],
+  );
+
   function start(withFocus: boolean) {
-    if (withFocus) enterFocus();
+    // Com câmera, a apresentação sempre ocupa a tela toda.
+    if (withFocus || preferences.camera) enterFocus();
     setMode({ kind: "presenting", id: Date.now() });
   }
 
@@ -59,6 +82,28 @@ export default function Teleprompter() {
     leaveFocus();
     setMode({ kind: "editing" });
   }
+
+  const addTake = useCallback(
+    (take: Take) => setTakes((current) => [take, ...current]),
+    [],
+  );
+  const markSaved = useCallback(
+    (id: string) =>
+      setTakes((current) =>
+        current.map((take) => (take.id === id ? { ...take, saved: true } : take)),
+      ),
+    [],
+  );
+  const removeTake = useCallback(
+    (id: string) =>
+      setTakes((current) =>
+        current.filter((take) => {
+          if (take.id === id) URL.revokeObjectURL(take.url);
+          return take.id !== id;
+        }),
+      ),
+    [],
+  );
 
   if (mode.kind === "presenting") {
     return (
@@ -69,6 +114,12 @@ export default function Teleprompter() {
         initialWordsPerMinute={SPEEDS[preferences.speed]}
         holdPauses={preferences.holdPauses}
         countdown={preferences.countdown}
+        textColor={preferences.textColor}
+        camera={
+          preferences.camera ? { dim: preferences.dim, facing: preferences.facing } : null
+        }
+        onTake={addTake}
+        onTakeSaved={markSaved}
         focus={focus}
         onToggleFocus={focus ? leaveFocus : enterFocus}
         onExit={exit}
@@ -81,6 +132,9 @@ export default function Teleprompter() {
       preferences={preferences}
       onChange={(next) => setPreferences((previous) => ({ ...previous, ...next }))}
       onStart={start}
+      takes={takes}
+      onTakeSaved={markSaved}
+      onTakeRemove={removeTake}
     />
   );
 }

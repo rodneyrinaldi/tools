@@ -1,7 +1,19 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Badge, Button, SegmentedControl, TextArea, TextField } from "@/design-system";
+import {
+  Badge,
+  Button,
+  SegmentedControl,
+  Surface,
+  TextArea,
+  TextField,
+  cx,
+} from "@/design-system";
+import { INSECURE_CONTEXT_MESSAGE, type Take } from "./camera";
+import { COLOR_LABELS, TEXT_COLORS } from "./format";
+import { TakesList } from "./Takes";
+import { TokenView } from "./TokenView";
 import {
   estimateDurationMs,
   formatDuration,
@@ -34,6 +46,23 @@ const INSERTIONS: Insertion[] = [
   { label: "Indicação", before: "[", after: "]", placeholder: "sorria" },
 ];
 
+const FORMATS: { label: string; tag: string; title: string }[] = [
+  { label: "N", tag: "negrito", title: "Negrito" },
+  { label: "I", tag: "italico", title: "Itálico" },
+  { label: "S", tag: "sublinhado", title: "Sublinhado" },
+  { label: "A+", tag: "grande", title: "Grande" },
+  { label: "A−", tag: "pequeno", title: "Pequeno" },
+  { label: "Destaque", tag: "destaque", title: "Fundo destacado" },
+  { label: "Serifa", tag: "serifa", title: "Fonte serifada" },
+];
+
+const TEXT_COLOR_OPTIONS = [
+  { value: "white", label: "Branco" },
+  { value: "yellow", label: "Amarelo" },
+  { value: "cyan", label: "Ciano" },
+  { value: "green", label: "Verde" },
+] as const;
+
 function formatDelta(delta: number) {
   if (delta === 0) return "Nada a sugerir";
   const count = Math.abs(delta);
@@ -44,11 +73,24 @@ type EditorProps = {
   preferences: Preferences;
   onChange: (next: Partial<Preferences>) => void;
   onStart: (focus: boolean) => void;
+  takes: Take[];
+  onTakeSaved: (id: string) => void;
+  onTakeRemove: (id: string) => void;
 };
 
-export function Editor({ preferences, onChange, onStart }: EditorProps) {
+export function Editor({
+  preferences,
+  onChange,
+  onStart,
+  takes,
+  onTakeSaved,
+  onTakeRemove,
+}: EditorProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [confirmingClear, setConfirmingClear] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
+  const cameraAvailable =
+    typeof navigator !== "undefined" && Boolean(navigator.mediaDevices?.getUserMedia);
   // Última ação do botão Auto (inserir ou remover) — desfazível enquanto o texto não for editado.
   const [lastAuto, setLastAuto] = useState<{
     before: string;
@@ -74,7 +116,7 @@ export function Editor({ preferences, onChange, onStart }: EditorProps) {
     return () => clearTimeout(id);
   }, [confirmingClear]);
 
-  function insert({ before, after = "", placeholder = "" }: Insertion) {
+  function insert({ before, after = "", placeholder = "" }: Omit<Insertion, "label">) {
     const textarea = textareaRef.current;
     if (!textarea) return;
     const { selectionStart: start, selectionEnd: end, value } = textarea;
@@ -192,6 +234,120 @@ export function Editor({ preferences, onChange, onStart }: EditorProps) {
         </span>
       </div>
 
+      <div
+        className={styles.markers}
+        role="group"
+        aria-label="Formatar o texto selecionado"
+      >
+        <span className={styles.markersLabel}>Formatar:</span>
+        {FORMATS.map((format) => (
+          <Button
+            key={format.tag}
+            size="sm"
+            variant="secondary"
+            title={format.title}
+            aria-label={format.title}
+            onClick={() =>
+              insert({ before: `{${format.tag}}`, after: "{/}", placeholder: "texto" })
+            }
+          >
+            {format.label}
+          </Button>
+        ))}
+        <span className={styles.swatches}>
+          {TEXT_COLORS.map((color) => (
+            <button
+              key={color}
+              type="button"
+              className={cx(styles.swatch, styles[`swatch-${color}`])}
+              title={COLOR_LABELS[color]}
+              aria-label={`Cor ${COLOR_LABELS[color]}`}
+              onClick={() =>
+                insert({
+                  before: `{${COLOR_LABELS[color]}}`,
+                  after: "{/}",
+                  placeholder: "texto",
+                })
+              }
+            />
+          ))}
+        </span>
+        <Button
+          size="sm"
+          variant="ghost"
+          aria-pressed={showPreview}
+          onClick={() => setShowPreview((value) => !value)}
+          disabled={isEmpty}
+        >
+          {showPreview ? "Ocultar prévia" : "Prévia"}
+        </Button>
+      </div>
+
+      {showPreview && !isEmpty && (
+        <Surface
+          padding="md"
+          className={styles.preview}
+          data-text-color={preferences.textColor}
+        >
+          {paragraphs.map((paragraph, index) => (
+            <p key={index}>
+              {paragraph.map((token, i) => (
+                <TokenView key={i} token={token} first={i === 0} />
+              ))}
+            </p>
+          ))}
+        </Surface>
+      )}
+
+      <div className={styles.settings}>
+        <SegmentedControl
+          label="Câmera"
+          options={[
+            { value: "off", label: "Desligada" },
+            { value: "on", label: "🎥 Ligada" },
+          ]}
+          value={preferences.camera ? "on" : "off"}
+          onChange={(value) => onChange({ camera: value === "on" })}
+        />
+        {preferences.camera && (
+          <>
+            <SegmentedControl
+              label="Escurecer a imagem"
+              options={[
+                { value: "light", label: "Leve" },
+                { value: "medium", label: "Médio" },
+                { value: "strong", label: "Forte" },
+              ]}
+              value={preferences.dim}
+              onChange={(dim) => onChange({ dim })}
+            />
+            <SegmentedControl
+              label="Usar câmera"
+              options={[
+                { value: "user", label: "Frontal" },
+                { value: "environment", label: "Traseira" },
+              ]}
+              value={preferences.facing}
+              onChange={(facing) => onChange({ facing })}
+            />
+          </>
+        )}
+        <SegmentedControl
+          label="Cor do texto"
+          options={TEXT_COLOR_OPTIONS}
+          value={preferences.textColor}
+          onChange={(textColor) => onChange({ textColor })}
+        />
+      </div>
+
+      {preferences.camera && (
+        <p className={cx(styles.driveHint, !cameraAvailable && styles.warning)}>
+          {cameraAvailable
+            ? "Você se vê na câmera, escurecida, com o texto por cima. ● grava (contagem regressiva, depois grava e rola o texto); ⏸ pausa os dois; ⏹ encerra. O vídeo gravado contém só a câmera e o microfone, sem o texto."
+            : INSECURE_CONTEXT_MESSAGE}
+        </p>
+      )}
+
       <div className={styles.settings}>
         <SegmentedControl
           label="Condução"
@@ -252,13 +408,23 @@ export function Editor({ preferences, onChange, onStart }: EditorProps) {
           {confirmingClear ? "Confirmar limpeza" : "Limpar"}
         </Button>
         <span className={styles.spacer} />
-        <Button variant="secondary" onClick={() => onStart(false)} disabled={isEmpty}>
-          Iniciar
-        </Button>
-        <Button variant="primary" onClick={() => onStart(true)} disabled={isEmpty}>
-          Iniciar em modo foco
-        </Button>
+        {preferences.camera ? (
+          <Button variant="primary" onClick={() => onStart(true)} disabled={isEmpty}>
+            🎥 Abrir câmera
+          </Button>
+        ) : (
+          <>
+            <Button variant="secondary" onClick={() => onStart(false)} disabled={isEmpty}>
+              Iniciar
+            </Button>
+            <Button variant="primary" onClick={() => onStart(true)} disabled={isEmpty}>
+              Iniciar em modo foco
+            </Button>
+          </>
+        )}
       </div>
+
+      <TakesList takes={takes} onSaved={onTakeSaved} onRemove={onTakeRemove} />
     </div>
   );
 }
