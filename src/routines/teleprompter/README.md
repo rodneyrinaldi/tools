@@ -11,6 +11,8 @@ Leia seu roteiro olhando para a câmera. O texto rola de forma contínua: a linh
 1. Cole ou escreva o roteiro. Separe parágrafos com uma **linha em branco**.
 2. Escolha a **condução**:
    - **🎙 Voz** (recomendado): o texto acompanha sua fala. Na primeira vez, o navegador pede permissão para usar o microfone.
+     - **Reconhecimento de voz → 📱 No aparelho** (padrão): reconhece a fala no próprio celular/computador. O áudio não sai do aparelho e, com a câmera, o vídeo é gravado **com som**. Na primeira vez baixa cerca de 32 MB (fica em cache; depois funciona até sem internet).
+     - **🌐 Do navegador**: usa o reconhecimento do Chrome/Edge (áudio processado pelo Google). Ele precisa do microfone só para si, então com a câmera o vídeo é gravado **sem som**. Use se o aparelho for lento demais para o reconhecimento local.
    - **⏩ Velocidade**: rolagem constante. Escolha Lento, Normal ou Rápido e se as **pausas marcadas** seguram o texto ou são só visuais.
 3. Defina a **contagem regressiva** e clique em **Iniciar** (dentro da página) ou **Iniciar em modo foco** (tela cheia, só o texto). `Ctrl+Enter` também inicia.
 4. Leia a linha na **guia** (faixa com a seta ▶). As linhas já lidas continuam visíveis acima, para você se reencontrar se se perder.
@@ -49,7 +51,7 @@ A câmera só funciona em **HTTPS** (ou em `localhost`). Para usar no celular na
 
 Alternativa sem aviso de certificado: publicar o app num serviço com HTTPS (ex.: Vercel); o teleprompter roda inteiro no navegador.
 
-**Voz com a câmera ligada:** o reconhecimento tenta usar o mesmo microfone da câmera. Alguns celulares não permitem isso; nesse caso aparece "Mic ocupado" ou, depois de alguns segundos sem reconhecer nada, "Não estou ouvindo sua voz". Toque em **Usar velocidade**: o texto passa a rolar sozinho e a gravação continua com som (ajuste o ritmo com − e +).
+**Voz com a câmera ligada:** com o reconhecimento **no aparelho**, a gravação e a voz usam o mesmo microfone — o vídeo sai com som e o texto segue a fala. Na primeira gravação, espere "Preparando a voz…" virar "Ouvindo" (download do modelo). Se o modelo não carregar, a rotina passa sozinha para o reconhecimento do navegador. Se aparecer "Mic ocupado" ou "Não estou ouvindo sua voz", toque em **Usar velocidade**: o texto passa a rolar sozinho e a gravação continua (ajuste o ritmo com − e +).
 
 ## Formatação do texto
 
@@ -75,14 +77,14 @@ Isto é {grande negrito}muito importante{/}.
 
 ## Seguir a voz
 
-O navegador transforma sua fala em texto e a rotina procura essas palavras no roteiro, perto de onde você está:
+O reconhecedor transforma sua fala em texto e a rotina procura essas palavras no roteiro, perto de onde você está. No aparelho, o reconhecedor conhece só as palavras do roteiro, o que reduz os erros:
 
 - falou mais rápido, o texto acompanha; parou, respirou ou improvisou, o texto espera;
 - pulou um trecho, o texto avança até onde você está; repetiu uma frase, o texto volta;
 - o texto **não vai e volta** com as correções que o reconhecedor faz enquanto você fala: ele só volta quando você claramente repete um trecho, e saltos grandes para frente precisam se confirmar;
 - erros do reconhecimento (acentos, plurais, palavras cortadas) são tolerados.
 
-**Requisitos e privacidade:** funciona no **Chrome** e no **Edge**, com internet. No Chrome, o áudio é processado pelos servidores do Google. Se o microfone estiver bloqueado ou o reconhecimento falhar, um aviso oferece **Usar velocidade**, e `V` alterna entre os modos a qualquer momento.
+**Requisitos e privacidade:** o reconhecimento **no aparelho** (Vosk, em WebAssembly) funciona nos navegadores modernos, inclusive sem internet depois do primeiro download, e o áudio não sai do aparelho. O **do navegador** funciona no **Chrome** e no **Edge**, com internet; no Chrome, o áudio é processado pelos servidores do Google. Se o microfone estiver bloqueado ou o reconhecimento falhar, um aviso oferece **Usar velocidade**, e `V` alterna entre os modos a qualquer momento.
 
 **Dica:** números falados ("vinte por cento") não casam com algarismos ("20%"). O texto se reencontra nas palavras seguintes; se preferir, escreva os números por extenso.
 
@@ -142,28 +144,31 @@ O botão funciona como **liga/desliga**: se o roteiro já tem marcações, ele v
 
 ## Para desenvolvedores
 
-| Arquivo                   | Responsabilidade                                                 |
-| ------------------------- | ---------------------------------------------------------------- |
-| `index.ts`                | manifesto da rotina                                              |
-| `Teleprompter.tsx`        | alterna editor ↔ apresentação; preferências; tela cheia          |
-| `Editor.tsx`              | tela de edição, condução e inserção de marcações                 |
-| `Session.tsx`             | laço de rolagem (requestAnimationFrame), voz/velocidade, atalhos |
-| `Presenter.tsx`           | visual: guia, contexto, controles (encaixada, foco e câmera)     |
-| `TokenView.tsx`           | palavras formatadas e marcações (apresentação e prévia)          |
-| `format.ts`               | etiquetas de formatação `{…}` (puro)                             |
-| `CameraBar.tsx`           | controles de toque do modo câmera e indicador REC                |
-| `Takes.tsx`               | gravações: prévia, baixar, compartilhar, lista                   |
-| `camera.ts`               | tipos e funções puras de câmera e gravação                       |
-| `useCamera.ts`            | câmera + microfone (getUserMedia)                                |
-| `useRecorder.ts`          | gravação (MediaRecorder), pausa e cronômetro                     |
-| `scroll.ts`               | geometria da rolagem contínua (puro)                             |
-| `voice.ts`                | alinhamento das palavras faladas com o roteiro (puro)            |
-| `useSpeechRecognition.ts` | microfone via Web Speech API, com reinício automático            |
-| `autoMark.ts`             | marcação automática por heurísticas (puro)                       |
-| `script.ts`               | parser de marcações, quebra de linhas e durações (puro)          |
-| `playback.ts`             | fases da reprodução (puro)                                       |
-| `measure.ts`              | medição do texto com a fonte real (canvas)                       |
-| `storage.ts`              | persistência local das preferências                              |
+| Arquivo                         | Responsabilidade                                                 |
+| ------------------------------- | ---------------------------------------------------------------- |
+| `index.ts`                      | manifesto da rotina                                              |
+| `Teleprompter.tsx`              | alterna editor ↔ apresentação; preferências; tela cheia          |
+| `Editor.tsx`                    | tela de edição, condução e inserção de marcações                 |
+| `Session.tsx`                   | laço de rolagem (requestAnimationFrame), voz/velocidade, atalhos |
+| `Presenter.tsx`                 | visual: guia, contexto, controles (encaixada, foco e câmera)     |
+| `TokenView.tsx`                 | palavras formatadas e marcações (apresentação e prévia)          |
+| `format.ts`                     | etiquetas de formatação `{…}` (puro)                             |
+| `CameraBar.tsx`                 | controles de toque do modo câmera e indicador REC                |
+| `Takes.tsx`                     | gravações: prévia, baixar, compartilhar, lista                   |
+| `camera.ts`                     | tipos e funções puras de câmera e gravação                       |
+| `useCamera.ts`                  | câmera + microfone (getUserMedia)                                |
+| `useRecorder.ts`                | gravação (MediaRecorder), pausa e cronômetro                     |
+| `scroll.ts`                     | geometria da rolagem contínua (puro)                             |
+| `voice.ts`                      | alinhamento das palavras faladas com o roteiro (puro)            |
+| `useSpeechRecognition.ts`       | microfone via Web Speech API, com reinício automático            |
+| `useDeviceSpeechRecognition.ts` | reconhecimento no aparelho (Vosk), ouvindo a faixa da câmera     |
+| `audioFeed.ts`                  | áudio do microfone em blocos para o reconhecedor (AudioWorklet)  |
+| `voiceEngine.ts`                | escolha do reconhecedor (aparelho ou navegador) e suporte        |
+| `autoMark.ts`                   | marcação automática por heurísticas (puro)                       |
+| `script.ts`                     | parser de marcações, quebra de linhas e durações (puro)          |
+| `playback.ts`                   | fases da reprodução (puro)                                       |
+| `measure.ts`                    | medição do texto com a fonte real (canvas)                       |
+| `storage.ts`                    | persistência local das preferências                              |
 
 A posição do texto muda a cada quadro e é aplicada direto no DOM (`transform`), sem re-renderizar; o React só re-renderiza quando a linha sob a guia muda. A posição também é guardada em "tokens" para continuar correta quando o texto é re-quebrado (redimensionar a janela ou trocar de visualização).
 

@@ -112,6 +112,7 @@ export default function Teleprompter() {
         key={mode.id}
         text={preferences.text}
         drive={preferences.drive}
+        voiceEngine={preferences.voiceEngine}
         initialWordsPerMinute={SPEEDS[preferences.speed]}
         holdPauses={preferences.holdPauses}
         countdown={preferences.countdown}

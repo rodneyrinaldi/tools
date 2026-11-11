@@ -5,7 +5,7 @@
  * últimas palavras faladas numa janela em torno do cursor, tolerando erros de reconhecimento
  * (acentos, plurais, palavras cortadas) e palavras puladas.
  */
-import type { Line } from "./script";
+import type { Line, Token } from "./script";
 
 export type ScriptWord = {
   norm: string;
@@ -194,4 +194,26 @@ function levenshtein(a: string, b: string): number {
     }
   }
   return previous[b.length];
+}
+
+/** Acima disso, o reconhecedor no aparelho ouve livremente (a gramática ficaria lenta). */
+export const MAX_VOCABULARY = 3000;
+
+/**
+ * Palavras do roteiro como o reconhecedor as escreve (minúsculas, com acentos, sem
+ * pontuação), sem repetição. Restringir o reconhecedor a elas reduz muito os erros:
+ * o que for dito fora do roteiro vira "[unk]" e é ignorado pelo alinhamento.
+ */
+export function scriptVocabulary(paragraphs: Token[][]): string[] {
+  const vocabulary = new Set<string>();
+  for (const tokens of paragraphs) {
+    for (const token of tokens) {
+      if (token.kind !== "word") continue;
+      for (const part of token.text.toLowerCase().split(/[-–—'’/]/)) {
+        const word = part.replace(/[^\p{L}\p{N}]/gu, "");
+        if (word) vocabulary.add(word);
+      }
+    }
+  }
+  return [...vocabulary];
 }

@@ -20,7 +20,7 @@ A versão anterior mostrava uma linha por vez, com tempo fixo por linha e o text
 
 1. Campo de texto grande para o roteiro. Parágrafos são separados por linha em branco.
 2. Botões que inserem marcações na posição do cursor: pausa, respira, ênfase (envolve a seleção) e indicação de cena.
-3. **Condução:** **🎙 Voz** (padrão; desabilitada se o navegador não suporta reconhecimento de fala) ou **⏩ Velocidade**. Um texto explica cada modo e avisa que, no Chrome, o áudio é processado pelo Google.
+3. **Condução:** **🎙 Voz** (padrão; desabilitada se nenhum reconhecedor funcionar) ou **⏩ Velocidade**. No modo voz, **Reconhecimento de voz**: **📱 No aparelho** (padrão) ou **🌐 Do navegador**; opção sem suporte fica desabilitada e a preferência cai para a outra. Um texto explica o modo escolhido (aparelho: áudio não sai, vídeo com som, ~32 MB na primeira vez; navegador: Google no Chrome e, com câmera, vídeo sem som).
 4. No modo velocidade: **Lento** (110 ppm), **Normal** (140 ppm), **Rápido** (175 ppm) e **Pausas marcadas**: "Só visuais" (padrão) ou "Seguram o texto".
 5. Contagem regressiva em segundos (0–60, padrão 3).
 6. Exibe a duração estimada do roteiro (a 140 ppm no modo voz).
@@ -74,7 +74,8 @@ Regras de inserção:
    - **Movimento:** no modo voz, o texto vai até a palavra dita com uma mola amortecida (acelera e freia suave, sem ultrapassar nem recuar). Cada linha cruza o centro da guia no meio do seu tempo de leitura, então a linha destacada está sempre sobre a faixa. O esmaecimento do topo/base é um degradê por cima (sem `mask-image`) e a trilha é uma camada própria (`will-change`), para não tremer.
 6. **Reposicionar a qualquer momento** com `↑`/`↓` (uma linha), roda do mouse/trackpad (fino) ou passador de slides. No modo voz, a escuta recomeça a partir do novo ponto, descartando o que já foi ouvido.
 7. Indicador do microfone (ligando, ouvindo, bloqueado, ocupado, falha). Microfone bloqueado, ocupado (`audio-capture`) ou falha mostram um aviso com **Usar velocidade**.
-   - Com a câmera ligada, o reconhecimento recebe uma cópia da faixa de áudio da câmera (`start(audioTrack)`, onde o navegador suporta), para não disputar o microfone com a gravação.
+   - **No aparelho:** reconhecedor Vosk (WebAssembly, num worker) com o modelo `vosk-model-small-pt-0.3` (~32 MB), servido pelo app em `/models` (baixado por `scripts/fetch-voice-model.mjs` antes de `dev`/`build`; cópia pública do vosk-browser como reserva) e em cache longo. O modelo começa a carregar ao abrir a apresentação; enquanto carrega, o indicador mostra "Preparando a voz…". O reconhecedor fica restrito às palavras do roteiro (até 3000 palavras distintas). Com a câmera, ouve a própria faixa de áudio da câmera — gravação com som e voz ao mesmo tempo; sem câmera, abre o microfone. Se o modelo não carregar, a sessão passa para o reconhecedor do navegador.
+   - **Do navegador:** Web Speech API. Com a câmera, a câmera abre **sem microfone** (o vídeo sai sem som, com aviso) para o reconhecimento ter o microfone; ainda tenta `start(audioTrack)` onde houver faixa de áudio.
    - Se o modo voz estiver rodando sem nenhuma fala reconhecida por 8 s, aparece "Não estou ouvindo sua voz" com **Usar velocidade**; some quando a fala volta a ser reconhecida.
 8. Alternar entre voz e velocidade durante a apresentação (botão ou `V`), mantendo a posição.
 9. Ao final, tela "Fim" com Reiniciar e Voltar ao editor.
@@ -143,6 +144,8 @@ Etiquetas entre chaves formatam trechos do roteiro: `{amarelo}texto{/}`, `{grand
 - [x] Modo voz: correções provisórias do reconhecedor e saltos isolados não fazem o texto ir e voltar.
 - [x] Modo voz: microfone bloqueado ou ocupado mostra aviso e permite trocar para velocidade.
 - [x] Modo voz com câmera: reconhecimento usa a faixa de áudio da câmera; silêncio prolongado gera aviso.
+- [x] Reconhecimento no aparelho: com a câmera, grava com som e o texto segue a fala (verificado no Chromium com microfone simulado tocando fala em pt-BR); modelo indisponível passa para o reconhecedor do navegador.
+- [x] Reconhecimento do navegador com câmera: vídeo gravado sem som, com aviso.
 - [x] Pausar e continuar de onde parou; reposicionar por setas, roda do mouse e passador.
 - [x] Reiniciar, sair, alternar voz/velocidade e ajustar velocidade por botão e teclado.
 - [x] Modo foco em tela cheia, sem nenhum elemento além do texto e controles autoocultáveis.
@@ -169,10 +172,11 @@ Etiquetas entre chaves formatam trechos do roteiro: `{amarelo}texto{/}`, `{grand
 ## Suposições
 
 - Largura de linha medida com a fonte real (canvas); sem canvas, usa contagem de caracteres.
-- Reconhecimento de fala pela Web Speech API (`pt-BR`), disponível no Chrome e no Edge; no Chrome, o áudio é processado em servidores do Google e exige internet.
+- Reconhecimento de fala no aparelho com `vosk-browser` (Apache-2.0) e modelo `vosk-model-small-pt-0.3`; exige WebAssembly, Worker e Web Audio. Em celulares fracos pode atrasar ou pesar na bateria — nesse caso use o do navegador ou a velocidade.
+- Reconhecimento do navegador pela Web Speech API (`pt-BR`), disponível no Chrome e no Edge; no Chrome, o áudio é processado em servidores do Google e exige internet.
 - Números falados ("vinte por cento") não casam com algarismos ("20%"); o alinhamento se reancora nas palavras seguintes.
 - Câmera e microfone exigem contexto seguro (HTTPS ou localhost). No celular, usar `npm run dev:celular` (HTTPS na rede local, certificado autoassinado) ou publicar o app em HTTPS.
-- Em alguns celulares Android, gravar (microfone em uso) e o reconhecimento de voz não funcionam ao mesmo tempo; nesse caso o modo voz mostra falha e a gravação segue no modo velocidade.
+- Em alguns celulares, gravar (microfone em uso) e o reconhecimento **do navegador** não funcionam ao mesmo tempo — por isso, com esse reconhecedor, a câmera grava sem som. O reconhecimento no aparelho não tem essa limitação.
 
 ## Fora de escopo
 
@@ -202,6 +206,9 @@ Etiquetas entre chaves formatam trechos do roteiro: `{amarelo}texto{/}`, `{grand
 - `scroll.ts` — geometria da rolagem contínua (puro)
 - `voice.ts` — alinhamento da fala com o roteiro (puro)
 - `useSpeechRecognition.ts` — microfone / Web Speech API
+- `useDeviceSpeechRecognition.ts` — reconhecimento no aparelho (Vosk), carga única do modelo
+- `audioFeed.ts` — áudio em blocos Float32 via AudioWorklet (ScriptProcessor como reserva)
+- `voiceEngine.ts` — suporte e escolha do reconhecedor
 - `playback.ts` — fases da reprodução (pura)
 - `measure.ts` — medição de texto (canvas / fallback)
 - `storage.ts` — persistência local

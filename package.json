@@ -3,8 +3,12 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "voice-model": "node scripts/fetch-voice-model.mjs",
+    "predev": "npm run voice-model",
     "dev": "next dev",
+    "predev:celular": "npm run voice-model",
     "dev:celular": "next dev --hostname 0.0.0.0 --experimental-https",
+    "prebuild": "npm run voice-model",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
@@ -19,7 +23,8 @@
     "next": "16.4.1",
     "pdf-lib": "^1.17.1",
     "react": "19.3.0",
-    "react-dom": "19.3.0"
+    "react-dom": "19.3.0",
+    "vosk-browser": "^0.0.8"
   },
   "devDependencies": {
     "@testing-library/dom": "^10.4.2",

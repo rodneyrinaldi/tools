@@ -21,8 +21,9 @@ type Recognition = {
 };
 type RecognitionConstructor = new () => Recognition;
 
+/** `loading`: baixando/preparando o modelo do reconhecedor no aparelho. */
 export type SpeechStatus =
-  "idle" | "starting" | "listening" | "denied" | "busy" | "error";
+  "idle" | "loading" | "starting" | "listening" | "denied" | "busy" | "error";
 
 /** Palavras já finalizadas mantidas para dar contexto ao início de cada nova frase. */
 const FINAL_BUFFER_WORDS = 12;

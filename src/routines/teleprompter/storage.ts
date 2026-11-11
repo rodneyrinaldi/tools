@@ -1,5 +1,6 @@
 import type { DimLevel, Facing } from "./camera";
 import { SPEEDS, type SpeedPreset } from "./script";
+import type { VoiceEngine } from "./voiceEngine";
 
 const KEY = "tools:teleprompter";
 
@@ -12,6 +13,8 @@ export type BaseTextColor = "white" | "yellow" | "cyan" | "green";
 export type Preferences = {
   text: string;
   drive: Drive;
+  /** Reconhecedor de voz: no aparelho (padrão) ou o do navegador. */
+  voiceEngine: VoiceEngine;
   speed: SpeedPreset;
   /** No modo velocidade, o texto desacelera nas marcações de pausa. */
   holdPauses: boolean;
@@ -28,6 +31,7 @@ export type Preferences = {
 export const DEFAULT_PREFERENCES: Preferences = {
   text: "",
   drive: "voice",
+  voiceEngine: "device",
   speed: "normal",
   holdPauses: false,
   countdown: 3,
@@ -53,6 +57,7 @@ export function loadPreferences(): Preferences {
     return {
       text: typeof data.text === "string" ? data.text : d.text,
       drive: oneOf(data.drive, ["voice", "speed"], d.drive),
+      voiceEngine: oneOf(data.voiceEngine, ["device", "browser"], d.voiceEngine),
       speed: data.speed && data.speed in SPEEDS ? data.speed : d.speed,
       holdPauses: typeof data.holdPauses === "boolean" ? data.holdPauses : d.holdPauses,
       countdown: clampCountdown(data.countdown ?? d.countdown),

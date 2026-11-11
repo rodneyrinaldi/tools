@@ -9,6 +9,7 @@ import styles from "./CameraBar.module.css";
 
 const VOICE_SHORT: Record<SpeechStatus, string> = {
   idle: "Voz pausada",
+  loading: "Preparando…",
   starting: "Ligando…",
   listening: "Ouvindo",
   denied: "Mic bloqueado",

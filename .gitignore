@@ -45,3 +45,6 @@ next-env.d.ts
 
 # certificados gerados por next dev --experimental-https
 /certificates
+
+# modelo de voz do teleprompter (baixado por scripts/fetch-voice-model.mjs)
+/public/models

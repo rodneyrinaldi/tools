@@ -22,7 +22,7 @@ import {
   type SpeedPreset,
 } from "./script";
 import { autoMark, hasMarks, stripMarks } from "./autoMark";
-import { isSpeechRecognitionSupported } from "./useSpeechRecognition";
+import { isEngineSupported, isVoiceSupported, resolveEngine } from "./voiceEngine";
 import { clampCountdown, type Preferences } from "./storage";
 import styles from "./Editor.module.css";
 
@@ -120,8 +120,9 @@ export function Editor({
 
   const paragraphs = parseScript(preferences.text);
   const isEmpty = paragraphs.length === 0;
-  const voiceSupported = isSpeechRecognitionSupported();
+  const voiceSupported = isVoiceSupported();
   const drive = voiceSupported ? preferences.drive : "speed";
+  const engine = resolveEngine(preferences.voiceEngine);
   const estimate = estimateDurationMs(
     paragraphs,
     drive === "voice" ? SPEEDS.normal : SPEEDS[preferences.speed],
@@ -381,6 +382,25 @@ export function Editor({
           value={drive}
           onChange={(next) => onChange({ drive: next })}
         />
+        {drive === "voice" && (
+          <SegmentedControl
+            label="Reconhecimento de voz"
+            options={[
+              {
+                value: "device",
+                label: "📱 No aparelho",
+                disabled: !isEngineSupported("device"),
+              },
+              {
+                value: "browser",
+                label: "🌐 Do navegador",
+                disabled: !isEngineSupported("browser"),
+              },
+            ]}
+            value={engine ?? preferences.voiceEngine}
+            onChange={(voiceEngine) => onChange({ voiceEngine })}
+          />
+        )}
         {drive === "speed" && (
           <>
             <SegmentedControl
@@ -420,10 +440,14 @@ export function Editor({
 
       <p className={styles.driveHint}>
         {drive === "voice"
-          ? "O texto acompanha sua fala: leia no seu ritmo, pule ou repita trechos. Usa o reconhecimento de voz do navegador — no Chrome, o áudio é processado pelo Google. ↑ ↓ ou a roda do mouse reposicionam a qualquer momento."
+          ? `O texto acompanha sua fala: leia no seu ritmo, pule ou repita trechos. ↑ ↓ ou a roda do mouse reposicionam a qualquer momento. ${
+              engine === "browser"
+                ? `Reconhecimento do navegador (no Chrome, o áudio é processado pelo Google)${preferences.camera ? " — ele precisa do microfone só para si, então o vídeo é gravado sem som." : "."}`
+                : "Reconhecimento no próprio aparelho: o áudio não sai dele e, com a câmera, o vídeo é gravado com som. Na primeira vez baixa cerca de 32 MB."
+            }`
           : voiceSupported
             ? "Rolagem em velocidade constante. Durante a leitura: + e − ajustam a velocidade, ↑ ↓ ou a roda do mouse reposicionam, Espaço pausa."
-            : "Rolagem em velocidade constante. Para o texto seguir sua voz, use Chrome ou Edge."}
+            : "Rolagem em velocidade constante. Este navegador não consegue reconhecer voz."}
       </p>
 
       <div className={styles.actions}>

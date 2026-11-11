@@ -25,16 +25,17 @@ import {
 } from "./storage";
 import { useCamera } from "./useCamera";
 import { useRecorder } from "./useRecorder";
-import {
-  isSpeechRecognitionSupported,
-  useSpeechRecognition,
-} from "./useSpeechRecognition";
+import { useDeviceSpeechRecognition } from "./useDeviceSpeechRecognition";
+import { useSpeechRecognition } from "./useSpeechRecognition";
 import {
   buildWordIndex,
   cursorForPosition,
   positionForCursor,
+  scriptVocabulary,
   trackSpoken,
+  type Heard,
 } from "./voice";
+import { isEngineSupported, resolveEngine, type VoiceEngine } from "./voiceEngine";
 
 const MIN_WPM = 60;
 const MAX_WPM = 300;
@@ -46,6 +47,8 @@ export type CameraOptions = { dim: DimLevel; facing: Facing };
 type SessionProps = {
   text: string;
   drive: Drive;
+  /** Reconhecedor de voz preferido (cai para o outro se este não funcionar aqui). */
+  voiceEngine: VoiceEngine;
   initialWordsPerMinute: number;
   holdPauses: boolean;
   countdown: number;
@@ -68,6 +71,7 @@ type SessionProps = {
 export function Session({
   text,
   drive: initialDrive,
+  voiceEngine: preferredEngine,
   initialWordsPerMinute,
   holdPauses,
   countdown,
@@ -85,8 +89,22 @@ export function Session({
   const [layout, setLayout] = useState<Layout | null>(null);
   const [wordsPerMinute, setWordsPerMinute] = useState(initialWordsPerMinute);
   const [fontScale, setFontScale] = useState(initialFontScale);
+  // O reconhecedor no aparelho falhou (modelo não baixou etc.): passa para o do navegador.
+  const [deviceFailed, setDeviceFailed] = useState(false);
+  const [initialEngine] = useState(() => resolveEngine(preferredEngine));
+  const voiceEngine: VoiceEngine | null =
+    deviceFailed && initialEngine === "device"
+      ? isEngineSupported("browser")
+        ? "browser"
+        : null
+      : initialEngine;
   const [drive, setDrive] = useState<Drive>(() =>
-    initialDrive === "voice" && isSpeechRecognitionSupported() ? "voice" : "speed",
+    initialDrive === "voice" && initialEngine ? "voice" : "speed",
+  );
+  // O reconhecimento do navegador quer o microfone só para ele: com esse motor, a câmera
+  // grava sem som. Decidido ao abrir (reabrir a câmera no meio interromperia a gravação).
+  const [cameraAudio] = useState(
+    () => !(initialDrive === "voice" && initialEngine === "browser"),
   );
   // Com câmera, espera a pessoa apertar Gravar ou Ensaiar.
   const [playback, dispatch] = useReducer(
@@ -97,7 +115,7 @@ export function Session({
 
   // Câmera e gravação.
   const [facing, setFacing] = useState<Facing>(cameraOptions?.facing ?? "user");
-  const camera = useCamera(Boolean(cameraOptions), facing);
+  const camera = useCamera(Boolean(cameraOptions), facing, cameraAudio);
   const [lastTake, setLastTake] = useState<Take | null>(null);
   const recorder = useRecorder(camera.stream, (take) => {
     setLastTake(take);
@@ -118,6 +136,7 @@ export function Session({
     [lines, wordsPerMinute, holdPauses],
   );
   const words = useMemo(() => buildWordIndex(lines), [lines]);
+  const vocabulary = useMemo(() => scriptVocabulary(paragraphs), [paragraphs]);
   const spans = useMemo(() => lineSpans(lines), [lines]);
   const lineIndex = Math.min(lineIndexAt(lines, lineToken), lines.length - 1);
 
@@ -232,20 +251,39 @@ export function Session({
     return () => cancelAnimationFrame(frame);
   }, [playback.phase, drive, commit]);
 
-  const voiceStatus = useSpeechRecognition({
-    active: drive === "voice" && playback.phase === "running",
-    audioTrack: camera.stream?.getAudioTracks?.()[0] ?? null,
-    onTranscript: (heard) => {
-      const { lines, words } = latest.current;
-      const e = engine.current;
-      const next = trackSpoken(words, { cursor: e.cursor, pending: e.pending }, heard);
-      e.pending = next.pending;
-      if (next.cursor === e.cursor) return;
-      e.cursor = next.cursor;
-      e.target = positionForCursor(words, next.cursor, lines.length);
-    },
+  function followVoice(heard: Heard) {
+    const { lines, words } = latest.current;
+    const e = engine.current;
+    const next = trackSpoken(words, { cursor: e.cursor, pending: e.pending }, heard);
+    e.pending = next.pending;
+    if (next.cursor === e.cursor) return;
+    e.cursor = next.cursor;
+    e.target = positionForCursor(words, next.cursor, lines.length);
+  }
+
+  const listening = drive === "voice" && playback.phase === "running";
+  const audioTrack = camera.stream?.getAudioTracks?.()[0] ?? null;
+  const deviceVoice = useDeviceSpeechRecognition({
+    active: listening && voiceEngine === "device",
+    // Baixa o modelo já ao abrir, enquanto a pessoa se prepara.
+    preload: drive === "voice" && voiceEngine === "device",
+    audioTrack,
+    vocabulary,
+    onTranscript: followVoice,
   });
-  const forgetHeard = voiceStatus.forgetHeard;
+  const browserVoice = useSpeechRecognition({
+    active: listening && voiceEngine === "browser",
+    audioTrack,
+    onTranscript: followVoice,
+  });
+  const voiceStatus = voiceEngine === "browser" ? browserVoice : deviceVoice;
+  if (deviceVoice.failed && !deviceFailed) setDeviceFailed(true);
+  const forgetDevice = deviceVoice.forgetHeard;
+  const forgetBrowser = browserVoice.forgetHeard;
+  const forgetHeard = useCallback(() => {
+    forgetDevice();
+    forgetBrowser();
+  }, [forgetDevice, forgetBrowser]);
 
   /** Reposiciona manualmente (setas, roda do mouse, passador). */
   const moveBy = useCallback(
@@ -355,9 +393,7 @@ export function Session({
     e.pending = null;
     e.velocity = null;
     forgetHeard();
-    setDrive((current) =>
-      current === "voice" || !isSpeechRecognitionSupported() ? "speed" : "voice",
-    );
+    setDrive((current) => (current === "voice" || !voiceEngine ? "speed" : "voice"));
   }
 
   function handleLayout(next: Layout) {
@@ -436,7 +472,7 @@ export function Session({
       drive={drive}
       voiceStatus={voiceStatus.status}
       voiceSilent={voiceStatus.silent}
-      voiceSupported={isSpeechRecognitionSupported()}
+      voiceSupported={voiceEngine !== null}
       wordsPerMinute={wordsPerMinute}
       remainingMs={remainingMs}
       // O modo câmera sempre cobre a tela inteira, com ou sem a tela cheia do navegador.
@@ -450,6 +486,7 @@ export function Session({
           stream: camera.stream,
           error: camera.error,
           hasAudio: camera.hasAudio,
+          mutedForVoice: !cameraAudio,
           mirrored: facing === "user",
           dim: cameraOptions.dim,
           recorder: recorder.state,

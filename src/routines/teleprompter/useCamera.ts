@@ -26,7 +26,13 @@ const RETRYABLE = new Set([
  * Tentativas em ordem: alta resolução com microfone → resolução livre com microfone →
  * só vídeo. Alguns aparelhos recusam 1080p, outros não têm/negam o microfone.
  */
-function attempts(facing: Facing): MediaStreamConstraints[] {
+function attempts(facing: Facing, withAudio: boolean): MediaStreamConstraints[] {
+  if (!withAudio) {
+    return [
+      { video: { facingMode: facing, width: { ideal: 1920 }, height: { ideal: 1080 } } },
+      { video: { facingMode: facing } },
+    ];
+  }
   const audio = { echoCancellation: true, noiseSuppression: true };
   return [
     {
@@ -38,9 +44,9 @@ function attempts(facing: Facing): MediaStreamConstraints[] {
   ];
 }
 
-async function openCamera(facing: Facing): Promise<MediaStream> {
+async function openCamera(facing: Facing, withAudio: boolean): Promise<MediaStream> {
   let firstError: unknown;
-  for (const constraints of attempts(facing)) {
+  for (const constraints of attempts(facing, withAudio)) {
     try {
       return await navigator.mediaDevices.getUserMedia(constraints);
     } catch (error) {
@@ -53,8 +59,15 @@ async function openCamera(facing: Facing): Promise<MediaStream> {
   throw firstError;
 }
 
-/** Liga câmera + microfone enquanto `enabled`; troca de câmera ao mudar `facing`. */
-export function useCamera(enabled: boolean, facing: Facing): CameraState {
+/**
+ * Liga câmera + microfone enquanto `enabled`; troca de câmera ao mudar `facing`.
+ * `withAudio: false` deixa o microfone livre (para o reconhecimento de voz do navegador).
+ */
+export function useCamera(
+  enabled: boolean,
+  facing: Facing,
+  withAudio = true,
+): CameraState {
   const [state, setState] = useState<CameraState>(IDLE);
 
   useEffect(() => {
@@ -71,7 +84,7 @@ export function useCamera(enabled: boolean, facing: Facing): CameraState {
       };
     }
 
-    openCamera(facing)
+    openCamera(facing, withAudio)
       .then(async (stream) => {
         if (cancelled) {
           stream.getTracks().forEach((track) => track.stop());
@@ -96,7 +109,7 @@ export function useCamera(enabled: boolean, facing: Facing): CameraState {
       cancelled = true;
       current?.getTracks().forEach((track) => track.stop());
     };
-  }, [enabled, facing]);
+  }, [enabled, facing, withAudio]);
 
   return enabled ? state : IDLE;
 }

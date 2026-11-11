@@ -19,6 +19,8 @@ export type CameraPresentation = {
   stream: MediaStream | null;
   error: string | null;
   hasAudio: boolean;
+  /** Sem som de propósito: o microfone ficou com o reconhecimento de voz do navegador. */
+  mutedForVoice: boolean;
   /** Câmera frontal aparece espelhada (como um espelho); a gravação sai normal. */
   mirrored: boolean;
   dim: DimLevel;
@@ -78,6 +80,7 @@ export function Presenter(props: PresenterProps) {
 
 const VOICE_LABEL: Record<SpeechStatus, string> = {
   idle: "Microfone pausado",
+  loading: "Preparando a voz…",
   starting: "Ligando microfone…",
   listening: "Ouvindo",
   denied: "Microfone bloqueado",
@@ -92,6 +95,10 @@ const VOICE_PROBLEM_MESSAGE: Partial<Record<SpeechStatus, string>> = {
   error:
     "O reconhecimento de voz falhou (sem internet?). Tente novamente ou use a velocidade.",
 };
+
+/** Na primeira vez o reconhecedor no aparelho baixa o modelo de voz (~32 MB). */
+const VOICE_LOADING_MESSAGE =
+  "Preparando o reconhecimento de voz no aparelho… Na primeira vez ele baixa cerca de 32 MB; depois funciona até sem internet.";
 
 function PresenterView({
   lines,
@@ -232,7 +239,15 @@ function PresenterView({
 
         {camera?.stream && !camera.hasAudio && (
           <div className={styles.cameraStatus} role="status">
-            Sem microfone: o vídeo será gravado sem som.
+            {camera.mutedForVoice
+              ? "Vídeo sem som: o microfone fica com o reconhecimento de voz do navegador."
+              : "Sem microfone: o vídeo será gravado sem som."}
+          </div>
+        )}
+
+        {drive === "voice" && voiceStatus === "loading" && phase === "running" && (
+          <div className={styles.cameraStatus} role="status">
+            {VOICE_LOADING_MESSAGE}
           </div>
         )}
 

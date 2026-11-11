@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { CHAR_MEASURER } from "./measure";
 import { parseScript, wrapScript } from "./script";
 import {
+  scriptVocabulary,
   buildWordIndex,
   cursorForPosition,
   matchSpoken,
@@ -139,5 +140,14 @@ describe("trackSpoken — proteção contra vai e volta", () => {
     expect(trackSpoken(words, glitch, interim("olá pessoal"))).toEqual(
       at(indexOf("pessoal") + 1),
     );
+  });
+});
+
+describe("scriptVocabulary", () => {
+  it("lista as palavras do roteiro como o reconhecedor escreve, sem repetir", () => {
+    const vocabulary = scriptVocabulary(
+      parseScript("Olá, {amarelo}mundo{/}! [pausa] Guarda-chuva *Olá* 2024"),
+    );
+    expect(vocabulary).toEqual(["olá", "mundo", "guarda", "chuva", "2024"]);
   });
 });
